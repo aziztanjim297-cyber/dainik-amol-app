@@ -28,6 +28,46 @@ jobs:
           cp -r temp_scaffold/android ./android
           rm -rf temp_scaffold
 
+      - name: Configure Android Desugaring and NDK
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import re
+
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+
+          s = s.replace(
+              'ndkVersion = flutter.ndkVersion',
+              'ndkVersion = "27.0.12077973"'
+          )
+
+          if 'isCoreLibraryDesugaringEnabled' not in s:
+              s, n = re.subn(
+                  r'(compileOptions\s*\{)',
+                  r'\1\n        isCoreLibraryDesugaringEnabled = true',
+                  s,
+                  count=1
+              )
+              if n == 0:
+                  raise SystemExit("compileOptions block পাওয়া যায়নি")
+
+          if 'desugar_jdk_libs' not in s:
+              if re.search(r'dependencies\s*\{', s):
+                  s = re.sub(
+                      r'(dependencies\s*\{)',
+                      r'\1\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")',
+                      s,
+                      count=1
+                  )
+              else:
+                  s += '\n\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+
+          p.write_text(s)
+          print("Desugaring এবং NDK কনফিগারেশন সফল")
+          PYTHON
+
+
       - name: Configure Kotlin Version
         run: |
           sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
