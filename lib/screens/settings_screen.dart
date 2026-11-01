@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'alarm_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final bool isBn;
@@ -29,7 +30,17 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ১. সম্পূর্ণ কার্যকর ভাষা নির্বাচন
+          // ১. অ্যালার্ম ও নোটিফিকেশন সেটিংস
+          ListTile(
+            leading: const Icon(Icons.alarm, color: Color(0xFF0D5C3A)),
+            title: Text(isBn ? 'অ্যালার্ম ও নোটিফিকেশন নিয়ন্ত্রণ' : 'Alarms & Notifications'),
+            subtitle: Text(isBn ? '৫ ওয়াক্ত নামাজ, তাহাজ্জুদ ও আমলের অ্যালার্ম' : 'Manage prayer adhan & reminders'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: isBn))),
+          ),
+          const Divider(),
+
+          // ২. ভাষা নির্বাচন
           ListTile(
             leading: const Icon(Icons.language, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'অ্যাপের ভাষা (Language)' : 'App Language'),
@@ -47,7 +58,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
 
-          // ২. নামাজের মাজহাব নির্বাচন
+          // ৩. নামাজের মাজহাব নির্বাচন
           ListTile(
             leading: const Icon(Icons.mosque, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'নামাজের মাজহাব (আসরের সময়)' : 'Prayer Madhab (Asr)'),
@@ -65,7 +76,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
 
-          // ৩. থিম নির্বাচন
+          // ৪. থিম নির্বাচন
           ListTile(
             leading: const Icon(Icons.brightness_6, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'থিম নির্বাচন' : 'Theme Mode'),
@@ -83,16 +94,16 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
 
-          // ৪. অ্যাপ পরিচিতি (About App)
+          // ৫. অ্যাপ পরিচিতি
           ListTile(
             leading: const Icon(Icons.info_outline, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'অ্যাপ পরিচিতি (About App)' : 'About App'),
-            subtitle: const Text('দৈনন্দিন আমল v1.1.2'),
+            subtitle: const Text('দৈনন্দিন আমল v1.1.3'),
             onTap: () {
               showAboutDialog(
                 context: context,
                 applicationName: isBn ? 'দৈনন্দিন আমল' : 'Dainik Amal',
-                applicationVersion: '1.1.2',
+                applicationVersion: '1.1.3',
                 applicationIcon: const Icon(Icons.menu_book, color: Color(0xFF0D5C3A), size: 40),
                 children: [
                   Text(isBn
@@ -100,8 +111,8 @@ class SettingsScreen extends StatelessWidget {
                       : 'Purpose: A dedicated companion for managing and preserving a Muslim\'s daily prayers and righteous deeds.'),
                   const SizedBox(height: 8),
                   Text(isBn
-                      ? 'বৈশিষ্ট্য: হানাফি ও শাফেয়ী ওয়াক্ত, সময়ভিত্তিক আমল লক, কুরআন ও হাদিস রিডার এবং ডিজিটাল তাসবিহ।'
-                      : 'Features: Accurate prayer times, time-locked amals, Quran & Hadith readers, and digital tasbih.'),
+                      ? 'বৈশিষ্ট্য: হানাফি ও শাফেয়ী ওয়াক্ত, সময়ভিত্তিক আমল লক, অ্যালার্ম সিস্টেম, কুরআন ও হাদিস রিডার এবং ডিজিটাল তাসবিহ।'
+                      : 'Features: Accurate prayer times, time-locked amals, Alarm system, Quran & Hadith readers, and digital tasbih.'),
                 ],
               );
             },

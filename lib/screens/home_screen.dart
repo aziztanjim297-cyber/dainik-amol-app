@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
 import '../models/helpers.dart';
+import 'alarm_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isBn;
@@ -168,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     double percent = _totalActiveAmols == 0 ? 0 : (_completedAmols / _totalActiveAmols);
     int percentInt = (percent * 100).toInt();
     List<AmalItem> runningAmols = _getRunningAmols();
@@ -180,13 +182,18 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: () { _initTimes(); _loadAllData(); })
+          IconButton(
+            icon: const Icon(Icons.alarm),
+            tooltip: widget.isBn ? 'অ্যালার্ম সেটিংস' : 'Alarm Settings',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn))),
+          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: () { _initTimes(); _loadAllData(); }),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // তারিখ কার্ড (হিজরি তারিখ ও নিচে চাঁদ দেখার নোট)
+          // তারিখ ও সময় কার্ড (ডার্ক মোডেও সম্পূর্ণ স্পষ্ট)
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -196,21 +203,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: isDark ? const Color(0xFF1E293B) : Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
-                        Text(DateFormat('EEEE, d MMMM yyyy').format(now), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                        Text(DateFormat('EEEE, d MMMM yyyy').format(now), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.lightBlueAccent : Colors.blue)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 6),
 
-                  // হিজরি তারিখ (লাইন ১: তারিখ, লাইন ২: চাঁদ দেখার উপর নির্ভরশীল)
+                  // হিজরি তারিখ
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: isDark ? const Color(0xFF143526) : Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -220,9 +227,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(hijriDate, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 14)),
+                              Text(hijriDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A), fontSize: 14)),
                               const SizedBox(height: 2),
-                              Text('($hijriNote)', style: TextStyle(fontSize: 11, color: Colors.green.shade800, fontStyle: FontStyle.italic)),
+                              Text('($hijriNote)', style: TextStyle(fontSize: 11, color: isDark ? Colors.greenAccent : Colors.green.shade800, fontStyle: FontStyle.italic)),
                             ],
                           ),
                         ),
@@ -233,22 +240,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: isDark ? const Color(0xFF332015) : Colors.amber.shade50, borderRadius: BorderRadius.circular(8)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.wb_sunny_outlined, size: 18, color: Colors.deepOrange),
-                        Text(BanglaDateHelper.format(now), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                        Text(BanglaDateHelper.format(now), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
                       ],
                     ),
                   ),
                   const Divider(height: 18),
+
+                  // রিয়েল-টাইম সময় (ডার্ক মোডে উজ্জ্বল সাদা/সবুজ)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.access_time_filled, color: Color(0xFF0D5C3A), size: 20),
+                      Icon(Icons.access_time_filled, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A), size: 22),
                       const SizedBox(width: 8),
-                      Text(_currentTime, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87, letterSpacing: 1.2)),
+                      Text(
+                        _currentTime,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0D5C3A),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -259,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // আমলের লাইভ অগ্রগতি বার
           Card(
-            color: const Color(0xFFE8F5E9),
+            color: isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9),
             elevation: 1.5,
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -269,8 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.isBn ? 'আমলের অগ্রগতি' : 'Amal Progress', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
-                      Text('$_completedAmols/$_totalActiveAmols ${widget.isBn ? "সম্পন্ন" : "Done"} — $percentInt%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D5C3A))),
+                      Text(widget.isBn ? 'আমলের অগ্রগতি' : 'Amal Progress', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
+                      Text('$_completedAmols/$_totalActiveAmols ${widget.isBn ? "সম্পন্ন" : "Done"} — $percentInt%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -281,30 +298,20 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
 
-          // বর্তমান সময়ের রানিং আমল
+          // বর্তমান সময়ের রানিং আমল (ডানপাশের '৩টি সক্রিয়' ব্যাজ সম্পূর্ণ বাদ দেওয়া হয়েছে)
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.green.shade300)),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.bolt, color: Colors.green, size: 22),
-                          const SizedBox(width: 6),
-                          Text(widget.isBn ? 'বর্তমান সময়ের সক্রিয় আমল (Running)' : 'Active Amals (Running)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(10)),
-                        child: Text('${runningAmols.length} ${widget.isBn ? "টি সক্রিয়" : "Active"}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
-                      ),
+                      const Icon(Icons.bolt, color: Colors.green, size: 22),
+                      const SizedBox(width: 6),
+                      Text(widget.isBn ? 'বর্তমান সময়ের সক্রিয় আমল (Running)' : 'Active Amals (Running)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
                     ],
                   ),
                   const Divider(height: 16),
@@ -371,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
 
-          // নামাজের সময়
+          // নামাজের সময়সূচি (অ্যালার্ম আইকন সহ)
           if (prayerTimes != null)
             Card(
               child: Padding(
@@ -379,7 +386,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.isBn ? 'নামাজের সময়' : 'Prayer Times', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(widget.isBn ? 'নামাজের সময়' : 'Prayer Times', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
+                        InkWell(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn))),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.alarm_on, size: 18, color: Color(0xFF0D5C3A)),
+                              SizedBox(width: 4),
+                              Text('অ্যালার্ম', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     const Divider(height: 18),
                     _timeRow(widget.isBn ? 'সাহরীর শেষ সময়' : 'Suhoor Ends', prayerTimes!.fajr.subtract(const Duration(minutes: 10))),
                     _timeRow(widget.isBn ? 'ফজর' : 'Fajr', prayerTimes!.fajr),
