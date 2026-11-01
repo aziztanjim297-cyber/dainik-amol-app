@@ -16,6 +16,9 @@ dependencies:
   http: ^1.2.0
   syncfusion_flutter_pdfviewer: ^26.2.11
   cupertino_icons: ^1.0.6
+  geolocator: ^13.0.2
+  flutter_local_notifications: ^19.4.0
+  timezone: ^0.10.1
 
 flutter:
   uses-material-design: true

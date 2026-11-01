@@ -1,3 +1,4 @@
+import 'package:adhan/adhan.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,13 +6,62 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AlarmScreen extends StatefulWidget {
   final bool isBn;
-  const AlarmScreen({super.key, required this.isBn});
+  final Coordinates? coords;
+  final CalculationMethod calculationMethod;
+  final String madhab;
+
+  const AlarmScreen({
+    super.key,
+    required this.isBn,
+    required this.coords,
+    required this.calculationMethod,
+    required this.madhab,
+  });
 
   @override
   State<AlarmScreen> createState() => _AlarmScreenState();
 }
 
+
 class _AlarmScreenState extends State<AlarmScreen> {
+  DateTime? _getAlarmTime(String id, DateTime date) {
+    if (widget.coords == null) return null;
+
+    final params = _getParams();
+    final times = PrayerTimes(
+      widget.coords!,
+      DateComponents.from(date),
+      params,
+    );
+
+    switch (id) {
+      case 'alarm_tahajjud':
+        return times.fajr.subtract(const Duration(minutes: 30));
+      case 'alarm_fajr':
+        return times.fajr;
+      case 'alarm_ishraq':
+        return times.sunrise.add(const Duration(minutes: 15));
+      case 'alarm_dhuhr':
+        return times.dhuhr;
+      case 'alarm_asr':
+        return times.asr;
+      case 'alarm_maghrib':
+        return times.maghrib;
+      case 'alarm_isha':
+        return times.isha;
+      default:
+        return null;
+    }
+  }
+
+  CalculationParameters _getParams() {
+    final params = widget.calculationMethod.getParameters();
+    params.madhab = widget.madhab == 'hanafi'
+        ? Madhab.hanafi
+        : Madhab.shafi;
+    return params;
+  }
+
   final Map<String, bool> _alarms = {};
   final Map<String, bool> _notifications = {};
   Timer? _alarmVibrateTimer;

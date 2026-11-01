@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DailyAmolRecord {
-  final String date; // YYYY-MM-DD
+  final String date;
   final int totalAmols;
   final int completedAmols;
   final Map<String, int> zikrCounts;
@@ -18,35 +18,87 @@ class DailyAmolRecord {
   });
 
   Map<String, dynamic> toJson() => {
-    'date': date,
-    'totalAmols': totalAmols,
-    'completedAmols': completedAmols,
-    'zikrCounts': zikrCounts,
-    'amolStatus': amolStatus,
-  };
+        'date': date,
+        'totalAmols': totalAmols,
+        'completedAmols': completedAmols,
+        'zikrCounts': zikrCounts,
+        'amolStatus': amolStatus,
+      };
 
-  factory DailyAmolRecord.fromJson(Map<String, dynamic> json) => DailyAmolRecord(
-    date: json['date'] ?? '',
-    totalAmols: json['totalAmols'] ?? 0,
-    completedAmols: json['completedAmols'] ?? 0,
-    zikrCounts: Map<String, int>.from(json['zikrCounts'] ?? {}),
-    amolStatus: Map<String, bool>.from(json['amolStatus'] ?? {}),
-  );
+  factory DailyAmolRecord.fromJson(Map<String, dynamic> json) {
+    final rawZikr = json['zikrCounts'];
+    final rawAmol = json['amolStatus'];
+
+    return DailyAmolRecord(
+      date: json['date']?.toString() ?? '',
+      totalAmols: (json['totalAmols'] as num?)?.toInt() ?? 0,
+      completedAmols: (json['completedAmols'] as num?)?.toInt() ?? 0,
+      zikrCounts: rawZikr is Map
+          ? rawZikr.map(
+              (key, value) => MapEntry(
+                key.toString(),
+                (value as num?)?.toInt() ?? 0,
+              ),
+            )
+          : <String, int>{},
+      amolStatus: rawAmol is Map
+          ? rawAmol.map(
+              (key, value) => MapEntry(key.toString(), value == true),
+            )
+          : <String, bool>{},
+    );
+  }
 }
 
 class HistoryService {
   static const String _historyKey = 'amol_history_records_90days';
   static const String _lastActiveDateKey = 'last_recorded_active_date';
 
-  // রাত ১২টায় স্বয়ংক্রিয়ভাবে বিগত দিনের ডেটা স্থায়ীভাবে সংরক্ষণ
+  static String _today() {
+    return DateFormat('yyyy-MM-dd').format(DateTime.now());
+  }
+
+  static Future<Map<String, dynamic>> _getRawHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_historyKey);
+
+    if (raw == null || raw.isEmpty) return {};
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {}
+
+    return {};
+  }
+
+  static Map<String, int> _readZikrCounts(dynamic value) {
+    if (value is! Map) return {};
+
+    return value.map(
+      (key, count) => MapEntry(
+        key.toString(),
+        (count as num?)?.toInt() ?? 0,
+      ),
+    );
+  }
+
+  static Map<String, bool> _readAmolStatus(dynamic value) {
+    if (value is! Map) return {};
+
+    return value.map(
+      (key, status) => MapEntry(key.toString(), status == true),
+    );
+  }
+
   static Future<void> checkAndAutoArchive() async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _today();
     final lastActive = prefs.getString(_lastActiveDateKey);
 
     if (lastActive != null && lastActive != today) {
-      // বিগত দিনের জিকির ও আমল সংগ্রহ করে স্থায়ী ডাটাবেজে আর্কাইভ করা
-      Map<String, int> pastZikrs = {};
       final zikrPresets = [
         'সুবহানাল্লাহ — سُبْحَانَ اللَّهِ',
         'আলহামদুলিল্লাহ — الْحَمْدُ لِلَّهِ',
@@ -54,12 +106,18 @@ class HistoryService {
         'আস্তাগফিরুল্লাহ — أَسْتَغْفِرُ اللَّهَ',
         'দরুদ শরিফ — الصَّلَاةُ عَلَى النَّبِيِّ',
       ];
-      for (var z in zikrPresets) {
-        pastZikrs[z] = prefs.getInt('${lastActive}_total_$z') ?? 0;
+
+      final pastZikrs = <String, int>{};
+
+      for (final zikr in zikrPresets) {
+        pastZikrs[zikr] =
+            prefs.getInt('${lastActive}_total_$zikr') ?? 0;
       }
 
-      int doneCount = prefs.getInt('completed_amols_$lastActive') ?? 0;
-      int totalCount = prefs.getInt('total_amols_$lastActive') ?? 18;
+      final doneCount =
+          prefs.getInt('completed_amols_$lastActive') ?? 0;
+      final totalCount =
+          prefs.getInt('total_amols_$lastActive') ?? 18;
 
       await _saveToHistoryMap(
         dateStr: lastActive,
@@ -73,15 +131,15 @@ class HistoryService {
     await prefs.setString(_lastActiveDateKey, today);
   }
 
-  // প্রতিদিনের আমল ও জিকির রিয়েল-টাইম সংরক্ষণ
   static Future<void> saveTodayRecord({
     required int totalAmols,
     required int completedAmols,
     required Map<String, int> zikrCounts,
     required Map<String, bool> amolStatus,
   }) async {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _today();
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setString(_lastActiveDateKey, today);
     await prefs.setInt('completed_amols_$today', completedAmols);
     await prefs.setInt('total_amols_$today', totalAmols);
@@ -95,6 +153,34 @@ class HistoryService {
     );
   }
 
+  // শুধু জিকিরের সংখ্যা সংরক্ষণ করবে; আমলের হিসাব পরিবর্তন করবে না।
+  static Future<void> saveZikrCounts(
+    Map<String, int> zikrCounts,
+  ) async {
+    final today = _today();
+    final history = await _getRawHistory();
+    final oldData = history[today];
+
+    final oldRecord = oldData is Map
+        ? DailyAmolRecord.fromJson(
+            Map<String, dynamic>.from(oldData),
+          )
+        : null;
+
+    final mergedZikrs = <String, int>{
+      ...?oldRecord?.zikrCounts,
+      ...zikrCounts,
+    };
+
+    await _saveToHistoryMap(
+      dateStr: today,
+      total: oldRecord?.totalAmols ?? 18,
+      done: oldRecord?.completedAmols ?? 0,
+      zikrs: mergedZikrs,
+      amols: oldRecord?.amolStatus ?? {},
+    );
+  }
+
   static Future<void> _saveToHistoryMap({
     required String dateStr,
     required int total,
@@ -103,24 +189,41 @@ class HistoryService {
     required Map<String, bool> amols,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    Map<String, dynamic> history = await _getRawHistory();
+    final history = await _getRawHistory();
+
+    final oldData = history[dateStr];
+    final oldRecord = oldData is Map
+        ? DailyAmolRecord.fromJson(
+            Map<String, dynamic>.from(oldData),
+          )
+        : null;
+
+    final mergedZikrs = <String, int>{
+      ...?oldRecord?.zikrCounts,
+      ...zikrs,
+    };
+
+    final mergedAmols = <String, bool>{
+      ...?oldRecord?.amolStatus,
+      ...amols,
+    };
 
     final record = DailyAmolRecord(
       date: dateStr,
       totalAmols: total,
       completedAmols: done,
-      zikrCounts: zikrs,
-      amolStatus: amols,
+      zikrCounts: mergedZikrs,
+      amolStatus: mergedAmols,
     );
 
     history[dateStr] = record.toJson();
 
-    // ৯০ দিনের বেশি পুরনো ডেটা স্বয়ংক্রিয়ভাবে মুছে ফেলা
-    final cutoffDate = DateTime.now().subtract(const Duration(days: 90));
+    final cutoffDate =
+        DateTime.now().subtract(const Duration(days: 90));
+
     history.removeWhere((key, value) {
       try {
-        DateTime recordDate = DateTime.parse(key);
-        return recordDate.isBefore(cutoffDate);
+        return DateTime.parse(key).isBefore(cutoffDate);
       } catch (_) {
         return false;
       }
@@ -129,74 +232,65 @@ class HistoryService {
     await prefs.setString(_historyKey, jsonEncode(history));
   }
 
-  static Future<Map<String, dynamic>> _getRawHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_historyKey);
-    if (raw == null || raw.isEmpty) return {};
-    try {
-      return Map<String, dynamic>.from(jsonDecode(raw));
-    } catch (_) {
-      return {};
-    }
-  }
-
-  // নির্দিষ্ট কোনো দিনের সংরক্ষিত রিপোর্ট পাওয়া (ছবি/PDF এর জন্য)
-  static Future<DailyAmolRecord?> getRecordForDate(String dateStr) async {
+  static Future<DailyAmolRecord?> getRecordForDate(
+    String dateStr,
+  ) async {
     final history = await _getRawHistory();
-    if (history.containsKey(dateStr)) {
-      return DailyAmolRecord.fromJson(history[dateStr]);
+    final data = history[dateStr];
+
+    if (data is Map) {
+      return DailyAmolRecord.fromJson(
+        Map<String, dynamic>.from(data),
+      );
     }
+
     return null;
   }
 
-  // বিগত ৭ দিনের সামগ্রিক পরিসংখ্যান
   static Future<Map<String, dynamic>> getWeeklyStats() async {
-    final history = await _getRawHistory();
-    int totalAmols = 0;
-    int completedAmols = 0;
-    int totalZikr = 0;
-
-    for (int i = 0; i < 7; i++) {
-      String d = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(Duration(days: i)));
-      if (history.containsKey(d)) {
-        final rec = DailyAmolRecord.fromJson(history[d]);
-        totalAmols += rec.totalAmols;
-        completedAmols += rec.completedAmols;
-        rec.zikrCounts.forEach((_, count) => totalZikr += count);
-      }
-    }
-
-    double percent = totalAmols == 0 ? 0 : (completedAmols / totalAmols) * 100;
-    return {
-      'totalAmols': totalAmols,
-      'completedAmols': completedAmols,
-      'percent': percent.toInt(),
-      'totalZikr': totalZikr,
-    };
+    return _getStats(7);
   }
 
-  // বিগত ৩০ দিনের সামগ্রিক পরিসংখ্যান
   static Future<Map<String, dynamic>> getMonthlyStats() async {
+    return _getStats(30);
+  }
+
+  static Future<Map<String, dynamic>> _getStats(int days) async {
     final history = await _getRawHistory();
+
     int totalAmols = 0;
     int completedAmols = 0;
     int totalZikr = 0;
 
-    for (int i = 0; i < 30; i++) {
-      String d = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(Duration(days: i)));
-      if (history.containsKey(d)) {
-        final rec = DailyAmolRecord.fromJson(history[d]);
-        totalAmols += rec.totalAmols;
-        completedAmols += rec.completedAmols;
-        rec.zikrCounts.forEach((_, count) => totalZikr += count);
+    for (int i = 0; i < days; i++) {
+      final date = DateFormat('yyyy-MM-dd').format(
+        DateTime.now().subtract(Duration(days: i)),
+      );
+
+      final data = history[date];
+
+      if (data is Map) {
+        final record = DailyAmolRecord.fromJson(
+          Map<String, dynamic>.from(data),
+        );
+
+        totalAmols += record.totalAmols;
+        completedAmols += record.completedAmols;
+
+        for (final count in record.zikrCounts.values) {
+          totalZikr += count;
+        }
       }
     }
 
-    double percent = totalAmols == 0 ? 0 : (completedAmols / totalAmols) * 100;
+    final percent = totalAmols == 0
+        ? 0
+        : (completedAmols / totalAmols * 100).toInt();
+
     return {
       'totalAmols': totalAmols,
       'completedAmols': completedAmols,
-      'percent': percent.toInt(),
+      'percent': percent,
       'totalZikr': totalZikr,
     };
   }
