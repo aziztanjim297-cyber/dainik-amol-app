@@ -15,18 +15,27 @@ class _HadithScreenState extends State<HadithScreen> {
   String _searchQuery = '';
   Set<String> _bookmarkedHadiths = {};
   bool _showOnlyBookmarks = false;
+  double _arabicFontSize = 21.0;
 
   @override
   void initState() {
     super.initState();
-    _loadBookmarks();
+    _loadPreferences();
   }
 
-  Future<void> _loadBookmarks() async {
+  Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _bookmarkedHadiths = (prefs.getStringList('hadith_bookmarks_set') ?? []).toSet();
+      _arabicFontSize = prefs.getDouble('hadith_arabic_font_size') ?? 21.0;
     });
+  }
+
+  Future<void> _updateFontSize(double delta) async {
+    final newSize = (_arabicFontSize + delta).clamp(16.0, 32.0);
+    setState(() => _arabicFontSize = newSize);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('hadith_arabic_font_size', newSize);
   }
 
   Future<void> _toggleBookmark(String no) async {
@@ -56,10 +65,21 @@ class _HadithScreenState extends State<HadithScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? '৪০ হাদিস (শিক্ষা সহ)' : '40 Hadiths (With Lessons)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.isBn ? '৪০ হাদিস (শিক্ষা সহ)' : '40 Hadiths (Lessons)', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
+          // ফন্ট সাইজ ছোট/বড় করার বাটন
+          IconButton(
+            icon: const Icon(Icons.text_decrease, size: 20),
+            tooltip: 'ফন্ট ছোট করুন',
+            onPressed: () => _updateFontSize(-1.5),
+          ),
+          IconButton(
+            icon: const Icon(Icons.text_increase, size: 22),
+            tooltip: 'ফন্ট বড় করুন',
+            onPressed: () => _updateFontSize(1.5),
+          ),
           IconButton(
             icon: Icon(_showOnlyBookmarks ? Icons.bookmarks : Icons.bookmarks_outlined),
             tooltip: widget.isBn ? 'সংরক্ষিত হাদিস' : 'Bookmarks',
@@ -69,13 +89,12 @@ class _HadithScreenState extends State<HadithScreen> {
       ),
       body: Column(
         children: [
-          // অনুসন্ধান বক্স
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
-                hintText: widget.isBn ? 'হাদিস নম্বর বা বিষয় দিয়ে খুঁজুন...' : 'Search by hadith no or keyword...',
+                hintText: widget.isBn ? 'হাদিস নম্বর বা বিষয় দিয়ে খুঁজুন...' : 'Search hadith...',
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF0D5C3A)),
                 suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _searchQuery = '')) : null,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -91,7 +110,7 @@ class _HadithScreenState extends State<HadithScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.isBn ? 'কেবল বুকমার্ক করা হাদিস প্রদর্শিত হচ্ছে' : 'Showing bookmarked hadiths', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.brown)),
+                  Text(widget.isBn ? 'কেবল বুকমার্ক করা হাদিস প্রদর্শিত হচ্ছে' : 'Showing bookmarks', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.brown)),
                   TextButton(onPressed: () => setState(() => _showOnlyBookmarks = false), child: Text(widget.isBn ? 'সব দেখুন' : 'Show All')),
                 ],
               ),
@@ -128,21 +147,34 @@ class _HadithScreenState extends State<HadithScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // আরবি টেক্সট
+                                  // সুন্দর নাসখ আরবী ফন্ট ও ফ্রেম
                                   Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(color: isDark ? const Color(0xFF1E2621) : const Color(0xFFF9FBF9), borderRadius: BorderRadius.circular(8)),
-                                    child: Text(
-                                      h['arabic']!,
-                                      textAlign: TextAlign.right,
-                                      style: const TextStyle(fontSize: 18, height: 1.7, fontWeight: FontWeight.bold, fontFamily: 'serif'),
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF1E2621) : const Color(0xFFFBFDFB),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFF0D5C3A).withOpacity(0.2)),
+                                    ),
+                                    child: Directionality(
+                                      textDirection: TextDirection.rtl,
+                                      child: Text(
+                                        h['arabic']!,
+                                        textAlign: TextAlign.justify,
+                                        style: TextStyle(
+                                          fontSize: _arabicFontSize,
+                                          height: 1.9,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 0,
+                                          fontFamilyFallback: const ['Noto Naskh Arabic', 'Traditional Arabic', 'Amiri', 'sans-serif'],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 14),
 
                                   // বাংলা অর্থ
-                                  Text(h['bangla']!, style: const TextStyle(fontSize: 14, height: 1.6)),
-                                  const Divider(height: 20),
+                                  Text(h['bangla']!, style: const TextStyle(fontSize: 14.5, height: 1.6)),
+                                  const Divider(height: 22),
 
                                   // রাবি ও সূত্র
                                   Row(
@@ -160,7 +192,7 @@ class _HadithScreenState extends State<HadithScreen> {
                                   Text('সূত্র: ${h['source']}', style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
                                   const SizedBox(height: 12),
 
-                                  // এআই পর্যালোচনা ও প্রাপ্ত শিক্ষা
+                                  // এআই শিক্ষা ও তাদাব্বুর
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
@@ -175,7 +207,7 @@ class _HadithScreenState extends State<HadithScreen> {
                                           children: [
                                             const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFF0D5C3A)),
                                             const SizedBox(width: 6),
-                                            Text(widget.isBn ? 'প্রাপ্ত শিক্ষা ও তাদাব্বুর:' : 'Lessons & Reflection:', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 13)),
+                                            Text(widget.isBn ? 'প্রাপ্ত শিক্ষা ও তাদাব্বুর:' : 'Lesson & Reflection:', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 13)),
                                           ],
                                         ),
                                         const SizedBox(height: 6),

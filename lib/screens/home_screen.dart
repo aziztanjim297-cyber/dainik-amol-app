@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
 import '../models/helpers.dart';
+import '../models/history_service.dart';
 import 'alarm_screen.dart';
+import 'summary_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isBn;
@@ -23,15 +25,18 @@ class _HomeScreenState extends State<HomeScreen> {
   String _nextPrayerName = '';
   int _completedAmols = 0;
   int _totalActiveAmols = 0;
-  final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String _activeDateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> _amolStatus = {};
   List<AmalItem> _currentAmals = [];
   Map<String, bool> _enabledAmols = {};
+
+  final Coordinates _coords = Coordinates(23.8103, 90.4125);
 
   @override
   void initState() {
     super.initState();
     _initTimes();
+    HistoryService.checkAndAutoArchive(); // রাত ১২টার পূর্ববর্তী হিসাব সংরক্ষণ
     _loadAllData();
     _startClock();
   }
@@ -42,16 +47,22 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _initTimes() {
-    final coords = Coordinates(23.8103, 90.4125);
+  CalculationParameters _getParams() {
     final params = CalculationMethod.karachi.getParameters();
     params.madhab = widget.madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-    prayerTimes = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+    return params;
+  }
+
+  void _initTimes() {
+    prayerTimes = PrayerTimes(_coords, DateComponents.from(DateTime.now()), _getParams());
   }
 
   Future<void> _loadAllData() async {
     final prefs = await SharedPreferences.getInstance();
     final all = await AmalService.getAllAmals();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    _activeDateKey = today;
+
     int done = 0;
     int total = 0;
     Map<String, bool> status = {};
@@ -60,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var a in all) {
       bool isEnabled = a.isFard ? true : (prefs.getBool('enabled_${a.id}') ?? true);
       enabled[a.id] = isEnabled;
-      bool isDone = prefs.getBool('${todayKey}_${a.id}') ?? false;
+      bool isDone = prefs.getBool('${today}_${a.id}') ?? false;
       status[a.id] = isDone;
 
       if (isEnabled) {
@@ -78,12 +89,19 @@ class _HomeScreenState extends State<HomeScreen> {
         _totalActiveAmols = total;
       });
     }
+
+    HistoryService.saveTodayRecord(
+      totalAmols: total,
+      completedAmols: done,
+      zikrCounts: {},
+      amolStatus: status,
+    );
   }
 
   Future<void> _toggleAmolFromHome(String id) async {
     if (_amolStatus[id] == true) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('${todayKey}_$id', true);
+    await prefs.setBool('${_activeDateKey}_$id', true);
     _loadAllData();
   }
 
@@ -91,19 +109,41 @@ class _HomeScreenState extends State<HomeScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final now = DateTime.now();
       _currentTime = DateFormat('hh:mm:ss a').format(now);
+      final currentFormattedDate = DateFormat('yyyy-MM-dd').format(now);
+
+      // রাত ১২:০০ টা বাজার সাথে সাথে নতুন দিনের অটো-রিসেট ও আর্কাইভ ট্রিগার
+      if (_activeDateKey != currentFormattedDate) {
+        HistoryService.checkAndAutoArchive();
+        _initTimes();
+        _loadAllData();
+      }
+
       if (prayerTimes != null) {
         final nextPrayer = prayerTimes!.nextPrayer();
-        DateTime? nextTime = prayerTimes!.timeForPrayer(nextPrayer);
+        DateTime? nextTime;
+        String nextName = '';
+
+        if (nextPrayer == Prayer.none || nextPrayer == Prayer.fajr && now.isAfter(prayerTimes!.isha)) {
+          final tomorrow = now.add(const Duration(days: 1));
+          final tomorrowPrayerTimes = PrayerTimes(_coords, DateComponents.from(tomorrow), _getParams());
+          nextTime = tomorrowPrayerTimes.fajr;
+          nextName = widget.isBn ? 'ফজর (পরের দিন)' : 'Fajr (Tomorrow)';
+        } else {
+          nextTime = prayerTimes!.timeForPrayer(nextPrayer);
+          nextName = _getPrayerName(nextPrayer);
+        }
+
         if (nextTime != null) {
           final diff = nextTime.difference(now);
           if (diff.isNegative) {
             _initTimes();
           } else {
-            _nextPrayerName = _getPrayerName(nextPrayer);
+            _nextPrayerName = nextName;
             _countdown = '${diff.inHours.toString().padLeft(2, '0')}:${(diff.inMinutes % 60).toString().padLeft(2, '0')}:${(diff.inSeconds % 60).toString().padLeft(2, '0')}';
           }
         }
       }
+
       if (timer.tick % 4 == 0) _loadAllData();
       if (mounted) setState(() {});
     });
@@ -117,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case Prayer.asr: return widget.isBn ? 'আসর' : 'Asr';
       case Prayer.maghrib: return widget.isBn ? 'মাগরিব' : 'Maghrib';
       case Prayer.isha: return widget.isBn ? 'ইশা' : 'Isha';
-      default: return widget.isBn ? 'তাহাজ্জুদ' : 'Tahajjud';
+      default: return widget.isBn ? 'ফজর' : 'Fajr';
     }
   }
 
@@ -165,7 +205,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return now.isAfter(start) && now.isBefore(gracePeriod);
     }).toList();
   }
-
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -173,8 +212,10 @@ class _HomeScreenState extends State<HomeScreen> {
     double percent = _totalActiveAmols == 0 ? 0 : (_completedAmols / _totalActiveAmols);
     int percentInt = (percent * 100).toInt();
     List<AmalItem> runningAmols = _getRunningAmols();
-    String hijriDate = HijriService.getHijriDate(now, widget.isBn);
+
+    String hijriDate = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib);
     String hijriNote = HijriService.getHijriNote(widget.isBn);
+    String banglaDate = BanglaDateHelper.format(now, sunriseTime: prayerTimes?.sunrise);
 
     return Scaffold(
       appBar: AppBar(
@@ -183,8 +224,12 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: widget.isBn ? 'আমল রিপোর্ট' : 'Summary Report',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SummaryScreen(isBn: widget.isBn))),
+          ),
+          IconButton(
             icon: const Icon(Icons.alarm),
-            tooltip: widget.isBn ? 'অ্যালার্ম সেটিংস' : 'Alarm Settings',
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn))),
           ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: () { _initTimes(); _loadAllData(); }),
@@ -193,7 +238,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // তারিখ ও সময় কার্ড (ডার্ক মোডেও সম্পূর্ণ স্পষ্ট)
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -213,8 +257,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-
-                  // হিজরি তারিখ
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(color: isDark ? const Color(0xFF143526) : Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
@@ -237,7 +279,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(color: isDark ? const Color(0xFF332015) : Colors.amber.shade50, borderRadius: BorderRadius.circular(8)),
@@ -245,13 +286,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.wb_sunny_outlined, size: 18, color: Colors.deepOrange),
-                        Text(BanglaDateHelper.format(now), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
+                        Text(banglaDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
                       ],
                     ),
                   ),
                   const Divider(height: 18),
-
-                  // রিয়েল-টাইম সময় (ডার্ক মোডে উজ্জ্বল সাদা/সবুজ)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -273,8 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-
-          // আমলের লাইভ অগ্রগতি বার
           Card(
             color: isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9),
             elevation: 1.5,
@@ -297,8 +334,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // বর্তমান সময়ের রানিং আমল (ডানপাশের '৩টি সক্রিয়' ব্যাজ সম্পূর্ণ বাদ দেওয়া হয়েছে)
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.green.shade300)),
@@ -350,7 +385,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
 
-          // কাউন্টডাউন
           Card(
             color: const Color(0xFF0D5C3A),
             child: Padding(
@@ -362,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(widget.isBn ? 'পরবর্তী নামাজ' : 'Next Prayer', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text(_nextPrayerName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(_nextPrayerName, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   Column(
@@ -377,8 +411,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // নামাজের সময়সূচি (অ্যালার্ম আইকন সহ)
           if (prayerTimes != null)
             Card(
               child: Padding(

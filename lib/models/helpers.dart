@@ -10,10 +10,17 @@ class BanglaDateHelper {
     return n.toString().split('').map((d) => int.tryParse(d) != null ? _bnDigits[int.parse(d)] : d).join('');
   }
 
-  static String format(DateTime dt) {
-    int gYear = dt.year;
-    int gMonth = dt.month;
-    int gDay = dt.day;
+  // সূর্যোদয়ের সময় অনুযায়ী বাংলা তারিখ পরিবর্তন
+  static String format(DateTime dt, {DateTime? sunriseTime}) {
+    DateTime calcDt = dt;
+    // সূর্যোদয়ের আগে হলে আগের দিনের বাংলা তারিখ থাকবে
+    if (sunriseTime != null && dt.isBefore(sunriseTime)) {
+      calcDt = dt.subtract(const Duration(days: 1));
+    }
+
+    int gYear = calcDt.year;
+    int gMonth = calcDt.month;
+    int gDay = calcDt.day;
     bool isLeapYear = (gYear % 4 == 0 && gYear % 100 != 0) || (gYear % 400 == 0);
     int bnYear = (gMonth < 4 || (gMonth == 4 && gDay < 14)) ? gYear - 594 : gYear - 593;
     DateTime bNewYear = DateTime(gYear, 4, 14);
@@ -37,8 +44,15 @@ class BanglaDateHelper {
 }
 
 class HijriService {
-  static String getHijriDate(DateTime dt, [bool isBn = true]) {
-    final h = HijriCalendar.fromDate(dt);
+  // মাগরিবের সময় অনুযায়ী হিজরি তারিখ পরিবর্তন
+  static String getHijriDate(DateTime dt, [bool isBn = true, DateTime? maghribTime]) {
+    DateTime calcDt = dt;
+    // মাগরিবের ওয়াক্ত শুরু হলে পরের দিনের আরবি তারিখ শুরু হবে
+    if (maghribTime != null && !dt.isBefore(maghribTime)) {
+      calcDt = dt.add(const Duration(days: 1));
+    }
+
+    final h = HijriCalendar.fromDate(calcDt);
     final bnMonths = ['মহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি', 'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান', 'রমাদান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'];
     final enMonths = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"];
     int mIdx = (h.hMonth - 1).clamp(0, 11);
