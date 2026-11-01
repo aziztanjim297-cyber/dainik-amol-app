@@ -22,7 +22,7 @@ class DainikAmolApp extends StatefulWidget {
 class _DainikAmolAppState extends State<DainikAmolApp> {
   ThemeMode _themeMode = ThemeMode.system;
   String _language = 'bn';
-  int _hijriAdjustment = 0;
+  String _madhab = 'hanafi';
 
   @override
   void initState() {
@@ -33,13 +33,10 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      String theme = prefs.getString('theme_mode') ?? 'system';
-      if (theme == 'light') _themeMode = ThemeMode.light;
-      else if (theme == 'dark') _themeMode = ThemeMode.dark;
-      else _themeMode = ThemeMode.system;
-
+      String t = prefs.getString('theme_mode') ?? 'system';
+      _themeMode = t == 'light' ? ThemeMode.light : (t == 'dark' ? ThemeMode.dark : ThemeMode.system);
       _language = prefs.getString('app_lang') ?? 'bn';
-      _hijriAdjustment = prefs.getInt('hijri_adjust') ?? 0;
+      _madhab = prefs.getString('madhab') ?? 'hanafi';
     });
   }
 
@@ -49,16 +46,10 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
     prefs.setString('theme_mode', mode == ThemeMode.light ? 'light' : (mode == ThemeMode.dark ? 'dark' : 'system'));
   }
 
-  void _updateLanguage(String lang) async {
-    setState(() => _language = lang);
+  void _updateMadhab(String m) async {
+    setState(() => _madhab = m);
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString('app_lang', lang);
-  }
-
-  void _updateHijriAdjustment(int adj) async {
-    setState(() => _hijriAdjustment = adj);
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('hijri_adjust', adj);
+    prefs.setString('madhab', m);
   }
 
   @override
@@ -71,7 +62,7 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
         useMaterial3: true,
         brightness: Brightness.light,
         colorSchemeSeed: const Color(0xFF0D5C3A),
-        scaffoldBackgroundColor: const Color(0xFFF6F8F7),
+        scaffoldBackgroundColor: const Color(0xFFF7F9F8),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
@@ -81,11 +72,10 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
       ),
       home: MainMasterScreen(
         language: _language,
-        hijriAdjustment: _hijriAdjustment,
+        madhab: _madhab,
         themeMode: _themeMode,
         onThemeChanged: _updateTheme,
-        onLanguageChanged: _updateLanguage,
-        onHijriAdjustmentChanged: _updateHijriAdjustment,
+        onMadhabChanged: _updateMadhab,
       ),
     );
   }
@@ -93,20 +83,18 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
 
 class MainMasterScreen extends StatefulWidget {
   final String language;
-  final int hijriAdjustment;
+  final String madhab;
   final ThemeMode themeMode;
   final Function(ThemeMode) onThemeChanged;
-  final Function(String) onLanguageChanged;
-  final Function(int) onHijriAdjustmentChanged;
+  final Function(String) onMadhabChanged;
 
   const MainMasterScreen({
     super.key,
     required this.language,
-    required this.hijriAdjustment,
+    required this.madhab,
     required this.themeMode,
     required this.onThemeChanged,
-    required this.onLanguageChanged,
-    required this.onHijriAdjustmentChanged,
+    required this.onMadhabChanged,
   });
 
   @override
@@ -120,18 +108,18 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
   Widget build(BuildContext context) {
     bool isBn = widget.language == 'bn';
     final screens = [
-      HomeScreen(isBn: isBn, hijriAdj: widget.hijriAdjustment),
-      AmalListScreen(isBn: isBn),
+      HomeScreen(isBn: isBn, madhab: widget.madhab),
+      AmalListScreen(isBn: isBn, madhab: widget.madhab),
       QuranScreen(isBn: isBn),
       HadithScreen(isBn: isBn),
       TasbihScreen(isBn: isBn),
       SettingsScreen(
         isBn: isBn,
         themeMode: widget.themeMode,
-        hijriAdj: widget.hijriAdjustment,
+        madhab: widget.madhab,
         onThemeChanged: widget.onThemeChanged,
-        onLanguageChanged: widget.onLanguageChanged,
-        onHijriChanged: widget.onHijriAdjustmentChanged,
+        onLanguageChanged: (_) {},
+        onMadhabChanged: widget.onMadhabChanged,
       ),
     ];
 
@@ -140,13 +128,13 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: isBn ? 'হোম' : 'Home'),
-          NavigationDestination(icon: const Icon(Icons.playlist_add_check), selectedIcon: const Icon(Icons.checklist), label: isBn ? 'আমল' : 'Amal'),
-          NavigationDestination(icon: const Icon(Icons.menu_book_outlined), selectedIcon: const Icon(Icons.menu_book), label: isBn ? 'কুরআন' : 'Quran'),
-          NavigationDestination(icon: const Icon(Icons.collections_bookmark_outlined), selectedIcon: const Icon(Icons.collections_bookmark), label: isBn ? 'হাদিস' : 'Hadith'),
-          NavigationDestination(icon: const Icon(Icons.touch_app_outlined), selectedIcon: const Icon(Icons.touch_app), label: isBn ? 'জিকির' : 'Tasbih'),
-          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings), label: isBn ? 'সেটিংস' : 'Settings'),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'হোম'),
+          NavigationDestination(icon: Icon(Icons.checklist), label: 'আমল'),
+          NavigationDestination(icon: Icon(Icons.menu_book), label: 'কুরআন'),
+          NavigationDestination(icon: Icon(Icons.bookmark), label: 'হাদিস'),
+          NavigationDestination(icon: Icon(Icons.touch_app), label: 'জিকির'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'সেটিংস'),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TasbihScreen extends StatefulWidget {
@@ -11,52 +12,59 @@ class TasbihScreen extends StatefulWidget {
 
 class _TasbihScreenState extends State<TasbihScreen> {
   int _counter = 0;
-  String _selectedZikr = 'সুবহানাল্লাহ';
-  final Map<String, int> _zikrTotals = {};
+  String _selectedZikr = 'সুবহানাল্লাহ — سُبْحَانَ اللَّهِ';
+  final Map<String, int> _todayCounts = {};
+
+  final List<String> zikrPresets = [
+    'সুবহানাল্লাহ — سُبْحَانَ اللَّهِ',
+    'আলহামদুলিল্লাহ — الْحَمْدُ لِلَّهِ',
+    'আল্লাহু আকবার — اللَّهُ أَكْبَرُ',
+    'আস্তাগফিরুল্লাহ — أَسْتَغْفِرُ اللَّهَ',
+    'দরুদ শরিফ — الصَّلَاةُ عَلَى النَّبِيِّ',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadTotals();
+    _loadDailyZikr();
   }
 
-  Future<void> _loadTotals() async {
+  Future<void> _loadDailyZikr() async {
     final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     setState(() {
-      _counter = prefs.getInt('tasbih_current') ?? 0;
-      _zikrTotals['সুবহানাল্লাহ'] = prefs.getInt('total_subhanallah') ?? 0;
-      _zikrTotals['আলহামদুলিল্লাহ'] = prefs.getInt('total_alhamdulillah') ?? 0;
-      _zikrTotals['আল্লাহু আকবার'] = prefs.getInt('total_allahuakbar') ?? 0;
-      _zikrTotals['আস্তাগফিরুল্লাহ'] = prefs.getInt('total_astaghfirullah') ?? 0;
-      _zikrTotals['দরুদ শরিফ'] = prefs.getInt('total_durood') ?? 0;
+      _counter = prefs.getInt('${today}_$_selectedZikr') ?? 0;
+      for (var z in zikrPresets) {
+        _todayCounts[z] = prefs.getInt('${today}_$z') ?? 0;
+      }
     });
   }
 
   Future<void> _increment() async {
     final prefs = await SharedPreferences.getInstance();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     setState(() {
       _counter++;
-      _zikrTotals[_selectedZikr] = (_zikrTotals[_selectedZikr] ?? 0) + 1;
+      _todayCounts[_selectedZikr] = (_todayCounts[_selectedZikr] ?? 0) + 1;
     });
-    await prefs.setInt('tasbih_current', _counter);
-    if (_selectedZikr == 'সুবহানাল্লাহ') await prefs.setInt('total_subhanallah', _zikrTotals['সুবহানাল্লাহ']!);
-    if (_selectedZikr == 'আলহামদুলিল্লাহ') await prefs.setInt('total_alhamdulillah', _zikrTotals['আলহামদুলিল্লাহ']!);
-    if (_selectedZikr == 'আল্লাহু আকবার') await prefs.setInt('total_allahuakbar', _zikrTotals['আল্লাহু আকবার']!);
-    if (_selectedZikr == 'আস্তাগফিরুল্লাহ') await prefs.setInt('total_astaghfirullah', _zikrTotals['আস্তাগফিরুল্লাহ']!);
-    if (_selectedZikr == 'দরুদ শরিফ') await prefs.setInt('total_durood', _zikrTotals['দরুদ শরিফ']!);
+    await prefs.setInt('${today}_$_selectedZikr', _counter);
   }
 
   Future<void> _reset() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => _counter = 0);
-    await prefs.setInt('tasbih_current', 0);
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    setState(() {
+      _counter = 0;
+      _todayCounts[_selectedZikr] = 0;
+    });
+    await prefs.setInt('${today}_$_selectedZikr', 0);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'ডিজিটাল জিকির কাউন্টার' : 'Tasbih Counter', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('ডিজিটাল জিকির কাউন্টার', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
@@ -64,49 +72,51 @@ class _TasbihScreenState extends State<TasbihScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // ১২. বাংলা ও আরবি নাম একসাথে
             DropdownButton<String>(
               value: _selectedZikr,
-              items: ['সুবহানাল্লাহ', 'আলহামদুলিল্লাহ', 'আল্লাহু আকবার', 'আস্তাগফিরুল্লাহ', 'দরুদ শরিফ']
-                  .map((z) => DropdownMenuItem(value: z, child: Text(z, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))))
-                  .toList(),
+              items: zikrPresets.map((z) => DropdownMenuItem(value: z, child: Text(z, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)))).toList(),
               onChanged: (val) {
-                if (val != null) setState(() => _selectedZikr = val);
+                if (val != null) {
+                  setState(() => _selectedZikr = val);
+                  _loadDailyZikr();
+                }
               },
             ),
             const SizedBox(height: 25),
             GestureDetector(
               onTap: _increment,
               child: Container(
-                width: 230,
-                height: 230,
+                width: 220,
+                height: 220,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF0D5C3A),
-                  boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.35), blurRadius: 25, spreadRadius: 6)],
+                  boxShadow: [BoxShadow(color: Colors.green.withOpacity(0.3), blurRadius: 20, spreadRadius: 6)],
                 ),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text('$_counter', style: const TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text(widget.isBn ? 'চাপ দিন' : 'Tap', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                      const Text('চাপুন', style: TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
             TextButton.icon(
               onPressed: _reset,
               icon: const Icon(Icons.refresh, color: Colors.red),
-              label: Text(widget.isBn ? 'কাউন্টার রিসেট' : 'Reset', style: const TextStyle(color: Colors.red, fontSize: 16)),
+              label: const Text('রিসেট', style: TextStyle(color: Colors.red, fontSize: 16)),
             ),
             const Divider(height: 30),
-            Text(widget.isBn ? 'সংরক্ষিত মোট জিকিরের হিসাব:' : 'Saved Total Counts:', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text('আজকের মোট জিকির:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: _zikrTotals.entries.map((e) => Chip(label: Text('${e.key}: ${e.value}'))).toList(),
+              children: _todayCounts.entries.map((e) => Chip(label: Text('${e.key.split("—")[0].trim()}: ${e.value}'))).toList(),
             ),
           ],
         ),

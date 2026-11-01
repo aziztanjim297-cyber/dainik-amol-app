@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 class BanglaDateHelper {
   static final List<String> _bnMonths = ['বৈশাখ', 'জ্যৈষ্ঠ', 'আষাঢ়', 'শ্রাবণ', 'ভাদ্র', 'আশ্বিন', 'কার্তিক', 'অগ্রহায়ণ', 'পৌষ', 'মাঘ', 'ফাল্গুন', 'চৈত্র'];
   static final List<String> _bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -29,6 +33,29 @@ class BanglaDateHelper {
       bDay -= bDaysInMonths[i];
     }
     return '${toBanglaNum(bDay)} ${_bnMonths[bMonthIdx]}, ${toBanglaNum(bnYear)} বঙ্গাব্দ';
+  }
+}
+
+class HijriService {
+  static Future<String> getHijriDate(DateTime dt) async {
+    final prefs = await SharedPreferences.getInstance();
+    String cacheKey = 'hijri_${dt.year}_${dt.month}_${dt.day}';
+    String? cached = prefs.getString(cacheKey);
+    if (cached != null) return cached;
+
+    try {
+      final formatted = "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
+      final url = Uri.parse("https://api.aladhan.com/v1/gToH/$formatted");
+      final response = await http.get(url).timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final h = data['data']['hijri'];
+        String result = "${h['day']} ${h['month']['en']}, ${h['year']} হিজরি";
+        await prefs.setString(cacheKey, result);
+        return result;
+      }
+    } catch (_) {}
+    return "${dt.day} রমাদান, ${dt.year - 579} হিজরি (আনুমানিক)";
   }
 }
 
