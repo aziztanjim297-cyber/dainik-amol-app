@@ -11,6 +11,7 @@ void main() async {
 
 class DainikAmolApp extends StatelessWidget {
   const DainikAmolApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -28,12 +29,14 @@ class DainikAmolApp extends StatelessWidget {
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
+
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+
   final List<Widget> _screens = [
     const HomeScreen(),
     const TasbihScreen(),
@@ -59,12 +62,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late PrayerTimes prayerTimes;
+  PrayerTimes? prayerTimes;
   final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> amolStatus = {};
 
@@ -85,11 +89,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    final myCoordinates = Coordinates(23.8103, 90.4125);
-    final params = CalculationMethod.karachi.getParameters();
-    params.madhab = Madhab.hanafi;
-    prayerTimes = PrayerTimes.today(myCoordinates, params);
+    _calculateTimes();
     _loadAmolStatus();
+  }
+
+  void _calculateTimes() {
+    try {
+      final myCoordinates = Coordinates(23.8103, 90.4125);
+      final params = CalculationMethod.karachi.getParameters();
+      params.madhab = Madhab.hanafi;
+      final date = DateComponents.from(DateTime.now());
+      prayerTimes = PrayerTimes(myCoordinates, date, params);
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
   }
 
   Future<void> _loadAmolStatus() async {
@@ -112,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final hijriDate = HijriCalendar.now();
     int completedCount = amolStatus.values.where((v) => v == true).length;
-    double progress = completedCount / amolList.length;
+    double progress = amolList.isEmpty ? 0 : completedCount / amolList.length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('দৈনন্দিন আমল'), backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
@@ -131,6 +144,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 10),
+          if (prayerTimes != null)
+            Card(
+              color: const Color(0xFFE8F5E9),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _prayerItem('ফজর', prayerTimes!.fajr),
+                    _prayerItem('যোহর', prayerTimes!.dhuhr),
+                    _prayerItem('আসর', prayerTimes!.asr),
+                    _prayerItem('মাগরিব', prayerTimes!.maghrib),
+                    _prayerItem('ইশা', prayerTimes!.isha),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 15),
           Text('অগ্রগতি: $completedCount/${amolList.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
           LinearProgressIndicator(value: progress, color: const Color(0xFF0D5C3A), minHeight: 6),
           const SizedBox(height: 15),
@@ -155,20 +186,31 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _prayerItem(String name, DateTime time) {
+    return Column(
+      children: [
+        Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(DateFormat('hh:mm a').format(time), style: const TextStyle(fontSize: 11)),
+      ],
+    );
+  }
 }
 
 class TasbihScreen extends StatefulWidget {
   const TasbihScreen({super.key});
+
   @override
   State<TasbihScreen> createState() => _TasbihScreenState();
 }
 
 class _TasbihScreenState extends State<TasbihScreen> {
   int _counter = 0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ডিজিটাল তাসবিহ'), backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
+      appBar: AppBar(title: const Text('ডিজিタル তাসবিহ'), backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -192,6 +234,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
 
 class HadithScreen extends StatelessWidget {
   const HadithScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
