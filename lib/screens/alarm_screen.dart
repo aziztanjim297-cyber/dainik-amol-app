@@ -13,9 +13,9 @@ class AlarmScreen extends StatefulWidget {
   const AlarmScreen({
     super.key,
     required this.isBn,
-    required this.coords,
-    required this.calculationMethod,
-    required this.madhab,
+    this.coords,
+    this.calculationMethod = CalculationMethod.karachi,
+    this.madhab = 'hanafi',
   });
 
   @override
