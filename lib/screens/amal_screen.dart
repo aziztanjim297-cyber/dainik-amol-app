@@ -18,35 +18,18 @@ class _AmalListScreenState extends State<AmalListScreen> {
   final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> amolStatus = {};
   Map<String, bool> enabledAmols = {};
+  List<AmalItem> allAmals = [];
   PrayerTimes? prayerTimes;
   Timer? _refreshTimer;
 
-  final List<AmalItem> allAmals = [
-    AmalItem(id: 'tahajjud_4', titleBn: 'তাহাজ্জুদ নামাজ (৪ রাকাত)', titleEn: 'Tahajjud Prayer (4 Rak\'ah)', categoryBn: 'তাহাজ্জুদ', categoryEn: 'Tahajjud', isFard: false, prayerName: 'tahajjud'),
-    AmalItem(id: 'fajr_sunnah', titleBn: 'ফজর ২ রাকাত সুন্নত', titleEn: 'Fajr 2 Rak\'ah Sunnah', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: false, prayerName: 'fajr'),
-    AmalItem(id: 'fajr_fard', titleBn: 'ফজর ২ রাকাত ফরজ (জামাতে)', titleEn: 'Fajr 2 Rak\'ah Fard (Jama\'ah)', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: true, prayerName: 'fajr'),
-    AmalItem(id: 'surah_yasin', titleBn: 'সূরা ইয়াসিন তিলাওয়াত', titleEn: 'Surah Yasin Recitation', categoryBn: 'ফজর পরবর্তী', categoryEn: 'Post-Fajr', isFard: false, prayerName: 'post_fajr'),
-    AmalItem(id: 'ishraq', titleBn: 'ইশরাক নামাজ (৪ রাকাত)', titleEn: 'Ishraq Prayer (4 Rak\'ah)', categoryBn: 'ইশরাক', categoryEn: 'Ishraq', isFard: false, prayerName: 'ishraq'),
-    AmalItem(id: 'dhuhr_sunnah_pre', titleBn: 'যোহরের পূর্ববর্তী ৪ সুন্নত', titleEn: 'Dhuhr 4 Pre-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_fard', titleBn: 'যোহরের ৪ রাকাত ফরজ', titleEn: 'Dhuhr 4 Rak\'ah Fard', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: true, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_sunnah_post', titleBn: 'যোহরের পরবর্তী ২ সুন্নত', titleEn: 'Dhuhr 2 Post-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'asr_fard', titleBn: 'আসরের ৪ রাকাত ফরজ', titleEn: 'Asr 4 Rak\'ah Fard', categoryBn: 'আসর', categoryEn: 'Asr', isFard: true, prayerName: 'asr'),
-    AmalItem(id: 'evening_dhikr', titleBn: 'বিকেলের জিকির ও আজকার', titleEn: 'Evening Adhkar', categoryBn: 'আসর পরবর্তী', categoryEn: 'Post-Asr', isFard: false, prayerName: 'asr'),
-    AmalItem(id: 'maghrib_fard', titleBn: 'মাগরিবের ৩ রাকাত ফরজ', titleEn: 'Maghrib 3 Rak\'ah Fard', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: true, prayerName: 'maghrib'),
-    AmalItem(id: 'maghrib_sunnah', titleBn: 'মাগরিবের ২ রাকাত সুন্নত', titleEn: 'Maghrib 2 Sunnah', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'awwabin', titleBn: 'আওয়াবিন নামাজ', titleEn: 'Awwabin Prayer', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'surah_waqiah', titleBn: 'সূরা ওয়াকিয়াহ তিলাওয়াত', titleEn: 'Surah Waqiah Recitation', categoryBn: 'মাগরিব পরবর্তী', categoryEn: 'Post-Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'isha_fard', titleBn: 'ইশার ৪ রাকাত ফরজ', titleEn: 'Isha 4 Rak\'ah Fard', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'isha_sunnah', titleBn: 'ইশার ২ রাকাত সুন্নত', titleEn: 'Isha 2 Sunnah', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: false, prayerName: 'isha'),
-    AmalItem(id: 'isha_witr', titleBn: '৩ রাকাত বিতর', titleEn: '3 Rak\'ah Witr', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'surah_mulk', titleBn: 'সূরা মুলক তিলাওয়াত', titleEn: 'Surah Mulk Recitation', categoryBn: 'ঘুমানোর পূর্বে', categoryEn: 'Bedtime', isFard: false, prayerName: 'bedtime'),
-  ];
+  final TextEditingController _customTitleController = TextEditingController();
+  String _selectedPrayerCategory = 'fajr';
 
   @override
   void initState() {
     super.initState();
     _initTimes();
-    _loadAmolSettings();
+    _loadAmolData();
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
@@ -55,6 +38,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _customTitleController.dispose();
     super.dispose();
   }
 
@@ -65,15 +49,24 @@ class _AmalListScreenState extends State<AmalListScreen> {
     prayerTimes = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
   }
 
-  Future<void> _loadAmolSettings() async {
+  Future<void> _loadAmolData() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      for (var a in allAmals) {
-        amolStatus[a.id] = prefs.getBool('${todayKey}_${a.id}') ?? false;
-        // ফরজ আমল সর্বদা চালু থাকবে, ঐচ্ছিক আমল ব্যবহারকারীর পছন্দ
-        enabledAmols[a.id] = a.isFard ? true : (prefs.getBool('enabled_${a.id}') ?? true);
-      }
-    });
+    final amals = await AmalService.getAllAmals();
+    Map<String, bool> status = {};
+    Map<String, bool> enabled = {};
+
+    for (var a in amals) {
+      status[a.id] = prefs.getBool('${todayKey}_${a.id}') ?? false;
+      enabled[a.id] = a.isFard ? true : (prefs.getBool('enabled_${a.id}') ?? true);
+    }
+
+    if (mounted) {
+      setState(() {
+        allAmals = amals;
+        amolStatus = status;
+        enabledAmols = enabled;
+      });
+    }
   }
 
   Future<void> _toggleAmol(String id) async {
@@ -83,7 +76,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
     setState(() => amolStatus[id] = true);
   }
 
-  // ৫. ঐচ্ছিক আমল কাস্টমাইজেশন ডায়ালগ
+  // নতুন আমল যোগ ও ঐচ্ছিক আমল কাস্টমাইজেশন ডায়ালগ
   void _openCustomizationDialog() {
     showModalBottomSheet(
       context: context,
@@ -91,35 +84,125 @@ class _AmalListScreenState extends State<AmalListScreen> {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) => Container(
-          padding: const EdgeInsets.all(16),
-          height: MediaQuery.of(context).size.height * 0.75,
+          padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+          height: MediaQuery.of(context).size.height * 0.85,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.isBn ? 'ঐচ্ছিক আমল কাস্টমাইজেশন' : 'Customize Optional Amals', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                  Text(widget.isBn ? 'আমল কাস্টমাইজ ও নতুন আমল যোগ' : 'Customize & Add Amals', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                   IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                 ],
               ),
-              Text(widget.isBn ? 'যেসব ঐচ্ছিক আমল বন্ধ করবেন, তা মোট হিসাব ও তালিকা থেকে বাদ যাবে। ফরজ আমল বন্ধ করা যাবে না।' : 'Disabled optional deeds will be excluded from the total checklist. Fard cannot be disabled.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
               const Divider(),
+
+              // নতুন আমল যোগ করার ফর্ম
+              Card(
+                color: const Color(0xFFF1F8F5),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.isBn ? '+ নিজের নতুন আমল যুক্ত করুন' : '+ Add Custom Amal', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _customTitleController,
+                        decoration: InputDecoration(
+                          hintText: widget.isBn ? 'আমলের নাম লিখুন (যেমন: ৪ রাকাত চাশত)' : 'Enter amal title',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedPrayerCategory,
+                              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4), border: OutlineInputBorder()),
+                              items: [
+                                DropdownMenuItem(value: 'tahajjud', child: Text(widget.isBn ? 'তাহাজ্জুদ সময়' : 'Tahajjud')),
+                                DropdownMenuItem(value: 'fajr', child: Text(widget.isBn ? 'ফজর সময়' : 'Fajr')),
+                                DropdownMenuItem(value: 'post_fajr', child: Text(widget.isBn ? 'সকাল/ইশরাক' : 'Morning/Ishraq')),
+                                DropdownMenuItem(value: 'dhuhr', child: Text(widget.isBn ? 'যোহর সময়' : 'Dhuhr')),
+                                DropdownMenuItem(value: 'asr', child: Text(widget.isBn ? 'আসর সময়' : 'Asr')),
+                                DropdownMenuItem(value: 'maghrib', child: Text(widget.isBn ? 'মাগরিব সময়' : 'Maghrib')),
+                                DropdownMenuItem(value: 'isha', child: Text(widget.isBn ? 'ইশা সময়' : 'Isha')),
+                                DropdownMenuItem(value: 'bedtime', child: Text(widget.isBn ? 'ঘুমানোর সময়' : 'Bedtime')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => _selectedPrayerCategory = val);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
+                            onPressed: () async {
+                              if (_customTitleController.text.trim().isNotEmpty) {
+                                String title = _customTitleController.text.trim();
+                                await AmalService.addCustomAmal(title, _selectedPrayerCategory, widget.isBn ? 'কাস্টম আমল' : 'Custom');
+                                _customTitleController.clear();
+                                await _loadAmolData();
+                                setModalState(() {});
+                                setState(() {});
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isBn ? 'নতুন আমল সফলভাবে যুক্ত হয়েছে!' : 'New amal added!')));
+                              }
+                            },
+                            child: Text(widget.isBn ? 'যোগ করুন' : 'Add'),
+                          )
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(widget.isBn ? 'আমল তালিকা (চালু / বন্ধ করুন):' : 'Amal List (Enable / Disable):', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+
               Expanded(
                 child: ListView(
                   children: allAmals.map((a) {
                     bool isEnabled = enabledAmols[a.id] ?? true;
-                    return SwitchListTile(
-                      title: Text(widget.isBn ? a.titleBn : a.titleEn, style: TextStyle(fontWeight: FontWeight.w600, color: a.isFard ? Colors.black87 : null)),
-                      subtitle: Text(a.isFard ? (widget.isBn ? 'আবশ্যক / ফরজ (লক)' : 'Mandatory / Fard (Locked)') : (widget.isBn ? 'ঐচ্ছিক' : 'Optional')),
-                      value: isEnabled,
-                      activeColor: const Color(0xFF0D5C3A),
-                      onChanged: a.isFard ? null : (val) async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('enabled_${a.id}', val);
-                        setModalState(() => enabledAmols[a.id] = val);
-                        setState(() => enabledAmols[a.id] = val);
-                      },
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 3),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(8)),
+                      child: ListTile(
+                        dense: true,
+                        title: Text(widget.isBn ? a.titleBn : a.titleEn, style: TextStyle(fontWeight: FontWeight.w600, color: a.isFard ? Colors.black87 : null)),
+                        subtitle: Text(a.isFard ? (widget.isBn ? 'ফরজ (বাদ দেওয়া যাবে না)' : 'Fard (Mandatory)') : (a.isCustom ? (widget.isBn ? 'আপনার কাস্টম আমল' : 'Custom') : (widget.isBn ? 'ঐচ্ছিক' : 'Optional'))),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (a.isCustom)
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                onPressed: () async {
+                                  await AmalService.deleteCustomAmal(a.id);
+                                  await _loadAmolData();
+                                  setModalState(() {});
+                                  setState(() {});
+                                },
+                              ),
+                            Switch(
+                              value: isEnabled,
+                              activeColor: const Color(0xFF0D5C3A),
+                              onChanged: a.isFard ? null : (val) async {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setBool('enabled_${a.id}', val);
+                                setModalState(() => enabledAmols[a.id] = val);
+                                setState(() => enabledAmols[a.id] = val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   }).toList(),
                 ),
@@ -185,7 +268,6 @@ class _AmalListScreenState extends State<AmalListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // শুধুমাত্র সক্রিয় (চালু থাকা) আমলগুলো দেখানো হবে
     final activeAmals = allAmals.where((a) => enabledAmols[a.id] ?? true).toList();
     int completedCount = activeAmals.where((a) => amolStatus[a.id] == true).length;
     double progress = activeAmals.isEmpty ? 0 : completedCount / activeAmals.length;
@@ -199,13 +281,20 @@ class _AmalListScreenState extends State<AmalListScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: widget.isBn ? 'ঐচ্ছিক আমল কাস্টমাইজ' : 'Customize Amals',
+            tooltip: widget.isBn ? 'আমল কাস্টমাইজ' : 'Customize Amals',
             onPressed: _openCustomizationDialog,
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF0D5C3A),
+        foregroundColor: Colors.white,
+        onPressed: _openCustomizationDialog,
+        icon: const Icon(Icons.add_task),
+        label: Text(widget.isBn ? 'আমল কাস্টমাইজ ও নতুন আমল' : 'Customize & Add Amals'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
         children: [
           Card(
             color: const Color(0xFFE8F5E9),
@@ -234,7 +323,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
               ),
               child: ListTile(
                 leading: Icon(
-                  item.isFard ? Icons.star_rounded : Icons.radio_button_checked,
+                  item.isFard ? Icons.star_rounded : (item.isCustom ? Icons.bookmark_added : Icons.radio_button_checked),
                   color: item.isFard ? Colors.deepOrange : const Color(0xFF0D5C3A),
                 ),
                 title: Text(widget.isBn ? item.titleBn : item.titleEn, style: TextStyle(fontWeight: FontWeight.w600, decoration: isDone ? TextDecoration.lineThrough : null)),
