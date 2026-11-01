@@ -46,6 +46,12 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
     prefs.setString('theme_mode', mode == ThemeMode.light ? 'light' : (mode == ThemeMode.dark ? 'dark' : 'system'));
   }
 
+  void _updateLanguage(String lang) async {
+    setState(() => _language = lang);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_lang', lang);
+  }
+
   void _updateMadhab(String m) async {
     setState(() => _madhab = m);
     final prefs = await SharedPreferences.getInstance();
@@ -55,7 +61,7 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'দৈনন্দিন আমল',
+      title: _language == 'bn' ? 'দৈনন্দিন আমল' : 'Dainik Amal',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
@@ -75,6 +81,7 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
         madhab: _madhab,
         themeMode: _themeMode,
         onThemeChanged: _updateTheme,
+        onLanguageChanged: _updateLanguage,
         onMadhabChanged: _updateMadhab,
       ),
     );
@@ -86,6 +93,7 @@ class MainMasterScreen extends StatefulWidget {
   final String madhab;
   final ThemeMode themeMode;
   final Function(ThemeMode) onThemeChanged;
+  final Function(String) onLanguageChanged;
   final Function(String) onMadhabChanged;
 
   const MainMasterScreen({
@@ -94,6 +102,7 @@ class MainMasterScreen extends StatefulWidget {
     required this.madhab,
     required this.themeMode,
     required this.onThemeChanged,
+    required this.onLanguageChanged,
     required this.onMadhabChanged,
   });
 
@@ -118,7 +127,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
         themeMode: widget.themeMode,
         madhab: widget.madhab,
         onThemeChanged: widget.onThemeChanged,
-        onLanguageChanged: (_) {},
+        onLanguageChanged: widget.onLanguageChanged,
         onMadhabChanged: widget.onMadhabChanged,
       ),
     ];
@@ -128,13 +137,13 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'হোম'),
-          NavigationDestination(icon: Icon(Icons.checklist), label: 'আমল'),
-          NavigationDestination(icon: Icon(Icons.menu_book), label: 'কুরআন'),
-          NavigationDestination(icon: Icon(Icons.bookmark), label: 'হাদিস'),
-          NavigationDestination(icon: Icon(Icons.touch_app), label: 'জিকির'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'সেটিংস'),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.home_outlined), label: isBn ? 'হোম' : 'Home'),
+          NavigationDestination(icon: const Icon(Icons.checklist), label: isBn ? 'আমল' : 'Amal'),
+          NavigationDestination(icon: const Icon(Icons.menu_book), label: isBn ? 'কুরআন' : 'Quran'),
+          NavigationDestination(icon: const Icon(Icons.bookmark), label: isBn ? 'হাদিস' : 'Hadith'),
+          NavigationDestination(icon: const Icon(Icons.touch_app), label: isBn ? 'জিকির' : 'Tasbih'),
+          NavigationDestination(icon: const Icon(Icons.settings), label: isBn ? 'সেটিংস' : 'Settings'),
         ],
       ),
     );

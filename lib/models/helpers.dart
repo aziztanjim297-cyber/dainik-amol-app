@@ -1,6 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hijri/hijri_calendar.dart';
 
 class BanglaDateHelper {
   static final List<String> _bnMonths = ['বৈশাখ', 'জ্যৈষ্ঠ', 'আষাঢ়', 'শ্রাবণ', 'ভাদ্র', 'আশ্বিন', 'কার্তিক', 'অগ্রহায়ণ', 'পৌষ', 'মাঘ', 'ফাল্গুন', 'চৈত্র'];
@@ -37,25 +35,18 @@ class BanglaDateHelper {
 }
 
 class HijriService {
-  static Future<String> getHijriDate(DateTime dt) async {
-    final prefs = await SharedPreferences.getInstance();
-    String cacheKey = 'hijri_${dt.year}_${dt.month}_${dt.day}';
-    String? cached = prefs.getString(cacheKey);
-    if (cached != null) return cached;
+  // গুগল স্ট্যান্ডার্ড উম্মুল কুরা হিজরি ক্যালেন্ডার
+  static String getHijriDate(DateTime dt, bool isBn) {
+    final h = HijriCalendar.fromDate(dt);
+    final bnMonths = ['মহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি', 'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান', 'রমাদান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'];
+    final enMonths = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"];
+    int mIdx = (h.hMonth - 1).clamp(0, 11);
 
-    try {
-      final formatted = "${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year}";
-      final url = Uri.parse("https://api.aladhan.com/v1/gToH/$formatted");
-      final response = await http.get(url).timeout(const Duration(seconds: 4));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final h = data['data']['hijri'];
-        String result = "${h['day']} ${h['month']['en']}, ${h['year']} হিজরি";
-        await prefs.setString(cacheKey, result);
-        return result;
-      }
-    } catch (_) {}
-    return "${dt.day} রমাদান, ${dt.year - 579} হিজরি (আনুমানিক)";
+    if (isBn) {
+      return '${BanglaDateHelper.toBanglaNum(h.hDay)} ${bnMonths[mIdx]}, ${BanglaDateHelper.toBanglaNum(h.hYear)} হিজরি (চাঁদ দেখার উপর নির্ভরশীল)';
+    } else {
+      return '${h.hDay} ${enMonths[mIdx]}, ${h.hYear} AH (Subject to moon sighting)';
+    }
   }
 }
 
@@ -63,7 +54,8 @@ class AmalItem {
   final String id;
   final String titleBn;
   final String titleEn;
-  final String category;
+  final String categoryBn;
+  final String categoryEn;
   final bool isFard;
   final String prayerName;
 
@@ -71,7 +63,8 @@ class AmalItem {
     required this.id,
     required this.titleBn,
     required this.titleEn,
-    required this.category,
+    required this.categoryBn,
+    required this.categoryEn,
     required this.isFard,
     required this.prayerName,
   });

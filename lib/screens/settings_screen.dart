@@ -29,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ১. ভাষা নির্বাচন (Language Toggle)
+          // ১. সম্পূর্ণ কার্যকর ভাষা নির্বাচন
           ListTile(
             leading: const Icon(Icons.language, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'অ্যাপের ভাষা (Language)' : 'App Language'),
@@ -87,12 +87,12 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline, color: Color(0xFF0D5C3A)),
             title: Text(isBn ? 'অ্যাপ পরিচিতি (About App)' : 'About App'),
-            subtitle: const Text('দৈনন্দিন আমল v1.1.1'),
+            subtitle: const Text('দৈনন্দিন আমল v1.1.2'),
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'দৈনন্দিন আমল',
-                applicationVersion: '1.1.1',
+                applicationName: isBn ? 'দৈনন্দিন আমল' : 'Dainik Amal',
+                applicationVersion: '1.1.2',
                 applicationIcon: const Icon(Icons.menu_book, color: Color(0xFF0D5C3A), size: 40),
                 children: [
                   Text(isBn
