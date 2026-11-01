@@ -20,37 +20,37 @@ class _HomeScreenState extends State<HomeScreen> {
   String _currentTime = '';
   String _countdown = '';
   String _nextPrayerName = '';
-  String _hijriDate = 'লোড হচ্ছে...';
   int _completedAmols = 0;
+  int _totalActiveAmols = 18;
   final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> _amolStatus = {};
+  Map<String, bool> _enabledAmols = {};
 
   final List<AmalItem> allAmals = [
-    AmalItem(id: 'tahajjud_4', titleBn: 'তাহাজ্জুদ নামাজ (৪ রাকাত)', titleEn: 'Tahajjud (4 Rak\'ah)', category: 'তাহাজ্জুদ', isFard: false, prayerName: 'tahajjud'),
-    AmalItem(id: 'fajr_sunnah', titleBn: 'ফজর ২ রাকাত সুন্নত', titleEn: 'Fajr 2 Sunnah', category: 'ফজর', isFard: false, prayerName: 'fajr'),
-    AmalItem(id: 'fajr_fard', titleBn: 'ফজর ২ রাকাত ফরজ', titleEn: 'Fajr 2 Fard', category: 'ফজর', isFard: true, prayerName: 'fajr'),
-    AmalItem(id: 'surah_yasin', titleBn: 'সূরা ইয়াসিন তিলাওয়াত', titleEn: 'Surah Yasin', category: 'ফজর পরবর্তী', isFard: false, prayerName: 'post_fajr'),
-    AmalItem(id: 'ishraq', titleBn: 'ইশরাক নামাজ (৪ রাকাত)', titleEn: 'Ishraq Prayer', category: 'ইশরাক', isFard: false, prayerName: 'ishraq'),
-    AmalItem(id: 'dhuhr_sunnah_pre', titleBn: 'যোহরের পূর্ববর্তী ৪ সুন্নত', titleEn: 'Dhuhr 4 Pre-Sunnah', category: 'যোহর', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_fard', titleBn: 'যোহরের ৪ রাকাত ফরজ', titleEn: 'Dhuhr 4 Fard', category: 'যোহর', isFard: true, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_sunnah_post', titleBn: 'যোহরের পরবর্তী ২ সুন্নত', titleEn: 'Dhuhr 2 Post-Sunnah', category: 'যোহর', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'asr_fard', titleBn: 'আসরের ৪ রাকাত ফরজ', titleEn: 'Asr 4 Fard', category: 'আসর', isFard: true, prayerName: 'asr'),
-    AmalItem(id: 'evening_dhikr', titleBn: 'বিকেলের জিকির ও আজকার', titleEn: 'Evening Adhkar', category: 'আসর পরবর্তী', isFard: false, prayerName: 'asr'),
-    AmalItem(id: 'maghrib_fard', titleBn: 'মাগরিবের ৩ রাকাত ফরজ', titleEn: 'Maghrib 3 Fard', category: 'মাগরিব', isFard: true, prayerName: 'maghrib'),
-    AmalItem(id: 'maghrib_sunnah', titleBn: 'মাগরিবের ২ রাকাত সুন্নত', titleEn: 'Maghrib 2 Sunnah', category: 'মাগরিব', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'awwabin', titleBn: 'আওয়াবিন নামাজ', titleEn: 'Awwabin Prayer', category: 'মাগরিব', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'surah_waqiah', titleBn: 'সূরা ওয়াকিয়াহ তিলাওয়াত', titleEn: 'Surah Waqiah', category: 'মাগরিব পরবর্তী', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'isha_fard', titleBn: 'ইশার ৪ রাকাত ফরজ', titleEn: 'Isha 4 Fard', category: 'ইশা', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'isha_sunnah', titleBn: 'ইশার ২ রাকাত সুন্নত', titleEn: 'Isha 2 Sunnah', category: 'ইশা', isFard: false, prayerName: 'isha'),
-    AmalItem(id: 'isha_witr', titleBn: '৩ রাকাত বিতর', titleEn: '3 Rak\'ah Witr', category: 'ইশা', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'surah_mulk', titleBn: 'সূরা মুলক তিলাওয়াত', titleEn: 'Surah Mulk', category: 'ঘুমানোর পূর্বে', isFard: false, prayerName: 'bedtime'),
+    AmalItem(id: 'tahajjud_4', titleBn: 'তাহাজ্জুদ নামাজ (৪ রাকাত)', titleEn: 'Tahajjud (4 Rak\'ah)', categoryBn: 'তাহাজ্জুদ', categoryEn: 'Tahajjud', isFard: false, prayerName: 'tahajjud'),
+    AmalItem(id: 'fajr_sunnah', titleBn: 'ফজর ২ রাকাত সুন্নত', titleEn: 'Fajr 2 Sunnah', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: false, prayerName: 'fajr'),
+    AmalItem(id: 'fajr_fard', titleBn: 'ফজর ২ রাকাত ফরজ (জামাতে)', titleEn: 'Fajr 2 Fard (Jama\'ah)', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: true, prayerName: 'fajr'),
+    AmalItem(id: 'surah_yasin', titleBn: 'সূরা ইয়াসিন তিলাওয়াত', titleEn: 'Surah Yasin', categoryBn: 'ফজর পরবর্তী', categoryEn: 'Post-Fajr', isFard: false, prayerName: 'post_fajr'),
+    AmalItem(id: 'ishraq', titleBn: 'ইশরাক নামাজ (৪ রাকাত)', titleEn: 'Ishraq Prayer', categoryBn: 'ইশরাক', categoryEn: 'Ishraq', isFard: false, prayerName: 'ishraq'),
+    AmalItem(id: 'dhuhr_sunnah_pre', titleBn: 'যোহরের পূর্ববর্তী ৪ সুন্নত', titleEn: 'Dhuhr 4 Pre-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
+    AmalItem(id: 'dhuhr_fard', titleBn: 'যোহরের ৪ রাকাত ফরজ', titleEn: 'Dhuhr 4 Fard', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: true, prayerName: 'dhuhr'),
+    AmalItem(id: 'dhuhr_sunnah_post', titleBn: 'যোহরের পরবর্তী ২ সুন্নত', titleEn: 'Dhuhr 2 Post-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
+    AmalItem(id: 'asr_fard', titleBn: 'আসরের ৪ রাকাত ফরজ', titleEn: 'Asr 4 Fard', categoryBn: 'আসর', categoryEn: 'Asr', isFard: true, prayerName: 'asr'),
+    AmalItem(id: 'evening_dhikr', titleBn: 'বিকেলের জিকির ও আজকার', titleEn: 'Evening Adhkar', categoryBn: 'আসর পরবর্তী', categoryEn: 'Post-Asr', isFard: false, prayerName: 'asr'),
+    AmalItem(id: 'maghrib_fard', titleBn: 'মাগরিবের ৩ রাকাত ফরজ', titleEn: 'Maghrib 3 Fard', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: true, prayerName: 'maghrib'),
+    AmalItem(id: 'maghrib_sunnah', titleBn: 'মাগরিবের ২ রাকাত সুন্নত', titleEn: 'Maghrib 2 Sunnah', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'awwabin', titleBn: 'আওয়াবিন নামাজ', titleEn: 'Awwabin Prayer', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'surah_waqiah', titleBn: 'সূরা ওয়াকিয়াহ তিলাওয়াত', titleEn: 'Surah Waqiah', categoryBn: 'মাগরিব পরবর্তী', categoryEn: 'Post-Maghrib', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'isha_fard', titleBn: 'ইশার ৪ রাকাত ফরজ', titleEn: 'Isha 4 Fard', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
+    AmalItem(id: 'isha_sunnah', titleBn: 'ইশার ২ রাকাত সুন্নত', titleEn: 'Isha 2 Sunnah', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: false, prayerName: 'isha'),
+    AmalItem(id: 'isha_witr', titleBn: '৩ রাকাত বিতর', titleEn: '3 Rak\'ah Witr', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
+    AmalItem(id: 'surah_mulk', titleBn: 'সূরা মুলক তিলাওয়াত', titleEn: 'Surah Mulk', categoryBn: 'ঘুমানোর পূর্বে', categoryEn: 'Bedtime', isFard: false, prayerName: 'bedtime'),
   ];
 
   @override
   void initState() {
     super.initState();
     _initTimes();
-    _fetchHijri();
     _loadProgress();
     _startClock();
   }
@@ -68,24 +68,31 @@ class _HomeScreenState extends State<HomeScreen> {
     prayerTimes = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
   }
 
-  Future<void> _fetchHijri() async {
-    String h = await HijriService.getHijriDate(DateTime.now());
-    if (mounted) setState(() => _hijriDate = h);
-  }
-
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
     int done = 0;
+    int total = 0;
     Map<String, bool> status = {};
+    Map<String, bool> enabled = {};
+
     for (var a in allAmals) {
+      bool isEnabled = a.isFard ? true : (prefs.getBool('enabled_${a.id}') ?? true);
+      enabled[a.id] = isEnabled;
       bool isDone = prefs.getBool('${todayKey}_${a.id}') ?? false;
       status[a.id] = isDone;
-      if (isDone) done++;
+
+      if (isEnabled) {
+        total++;
+        if (isDone) done++;
+      }
     }
+
     if (mounted) {
       setState(() {
         _amolStatus = status;
+        _enabledAmols = enabled;
         _completedAmols = done;
+        _totalActiveAmols = total;
       });
     }
   }
@@ -114,10 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       }
-      // প্রতি ৫ সেকেন্ড পর পর স্বয়ংক্রিয় প্রগ্রেস আপডেট
-      if (timer.tick % 5 == 0) {
-        _loadProgress();
-      }
+      if (timer.tick % 4 == 0) _loadProgress();
       if (mounted) setState(() {});
     });
   }
@@ -134,12 +138,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // বর্তমান সময়ের সক্রিয় (Running) আমল খোঁজার মেথড
   List<AmalItem> _getRunningAmols() {
     if (prayerTimes == null) return [];
     DateTime now = DateTime.now();
 
     return allAmals.where((item) {
+      if (!(_enabledAmols[item.id] ?? true)) return false;
       DateTime start, end;
       switch (item.prayerName) {
         case 'tahajjud':
@@ -182,9 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    double percent = allAmals.isEmpty ? 0 : (_completedAmols / allAmals.length);
+    double percent = _totalActiveAmols == 0 ? 0 : (_completedAmols / _totalActiveAmols);
     int percentInt = (percent * 100).toInt();
     List<AmalItem> runningAmols = _getRunningAmols();
+    String hijriDate = HijriService.getHijriDate(now, widget.isBn);
 
     return Scaffold(
       appBar: AppBar(
@@ -198,7 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // তারিখ ও সময় কার্ড
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -225,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.mosque, size: 18, color: Color(0xFF0D5C3A)),
-                        Text(_hijriDate, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                        Expanded(child: Text(hijriDate, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 13))),
                       ],
                     ),
                   ),
@@ -255,8 +259,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-
-          // আমলের অগ্রগতি বার (হোমে লাইভ আপডেট)
           Card(
             color: const Color(0xFFE8F5E9),
             elevation: 1.5,
@@ -269,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(widget.isBn ? 'আমলের অগ্রগতি' : 'Amal Progress', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
-                      Text('$_completedAmols/${allAmals.length} সম্পন্ন — $percentInt%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D5C3A))),
+                      Text('$_completedAmols/$_totalActiveAmols ${widget.isBn ? "সম্পন্ন" : "Done"} — $percentInt%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D5C3A))),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -279,8 +281,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // হোম পেজে "বর্তমান সময়ের রানিং আমল" সেকশন
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.green.shade300)),
@@ -296,13 +296,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const Icon(Icons.bolt, color: Colors.green, size: 22),
                           const SizedBox(width: 6),
-                          Text(widget.isBn ? 'বর্তমান সময়ের সক্রিয় আমল (Running)' : 'Current Active Amals', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
+                          Text(widget.isBn ? 'বর্তমান সময়ের সক্রিয় আমল (Running)' : 'Active Amals (Running)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(10)),
-                        child: Text('${runningAmols.length} টি সক্রিয়', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                        child: Text('${runningAmols.length} ${widget.isBn ? "টি সক্রিয়" : "Active"}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                       ),
                     ],
                   ),
@@ -320,13 +320,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(a.isFard ? Icons.star_rounded : Icons.check_circle_outline, color: a.isFard ? Colors.deepOrange : const Color(0xFF0D5C3A)),
                         title: Text(widget.isBn ? a.titleBn : a.titleEn, style: TextStyle(fontWeight: FontWeight.bold, decoration: isDone ? TextDecoration.lineThrough : null)),
-                        subtitle: Text(a.category, style: const TextStyle(fontSize: 12)),
+                        subtitle: Text(widget.isBn ? a.categoryBn : a.categoryEn, style: const TextStyle(fontSize: 12)),
                         trailing: isDone
-                            ? const Row(
+                            ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('সম্পন্ন ', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
-                                  Icon(Icons.lock, color: Colors.green, size: 16),
+                                  Text(widget.isBn ? 'সম্পন্ন ' : 'Done ', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const Icon(Icons.lock, color: Colors.green, size: 16),
                                 ],
                               )
                             : ElevatedButton(
@@ -341,8 +341,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // কাউন্টডাউন
           Card(
             color: const Color(0xFF0D5C3A),
             child: Padding(
@@ -369,8 +367,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // নামাজের সময়
           if (prayerTimes != null)
             Card(
               child: Padding(

@@ -35,8 +35,8 @@ class BanglaDateHelper {
 }
 
 class HijriService {
-  // গুগল স্ট্যান্ডার্ড উম্মুল কুরা হিজরি ক্যালেন্ডার
-  static String getHijriDate(DateTime dt, bool isBn) {
+  // গুগল স্ট্যান্ডার্ড উম্মুল কুরা হিজরি ক্যালেন্ডার (১ বা ২ আর্গুমেন্ট দুটোই সাপোর্ট করবে)
+  static String getHijriDate(DateTime dt, [bool isBn = true]) {
     final h = HijriCalendar.fromDate(dt);
     final bnMonths = ['মহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি', 'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান', 'রমাদান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'];
     final enMonths = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"];
@@ -63,9 +63,13 @@ class AmalItem {
     required this.id,
     required this.titleBn,
     required this.titleEn,
-    required this.categoryBn,
-    required this.categoryEn,
+    String? categoryBn,
+    String? categoryEn,
+    String? category,
     required this.isFard,
     required this.prayerName,
-  });
+  })  : categoryBn = categoryBn ?? category ?? '',
+        categoryEn = categoryEn ?? category ?? '';
+
+  String get category => categoryBn;
 }
