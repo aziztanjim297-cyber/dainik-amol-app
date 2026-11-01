@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class QuranScreen extends StatefulWidget {
   final bool isBn;
@@ -11,14 +12,14 @@ class QuranScreen extends StatefulWidget {
 }
 
 class _QuranScreenState extends State<QuranScreen> {
+  late PdfViewerController _pdfViewerController;
   int _currentPage = 1;
-  final int _totalPages = 604;
-  late PageController _pageController;
+  int _pageCount = 604;
   Set<int> _bookmarks = {};
   int _pagesReadToday = 0;
   final String _todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  // প্রধান প্রধান সূরার শুরুর পৃষ্ঠা ম্যাপিং (১ থেকে ১১৪ সূরার দ্রুত ইনডেক্স)
+  // প্রধান সূরার ইনডেক্স
   final List<Map<String, dynamic>> surahIndex = [
     {'no': 1, 'nameBn': 'আল-ফাতিহা', 'nameEn': 'Al-Fatiha', 'page': 1},
     {'no': 2, 'nameBn': 'আল-বাকারা', 'nameEn': 'Al-Baqarah', 'page': 2},
@@ -47,14 +48,8 @@ class _QuranScreenState extends State<QuranScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
+    _pdfViewerController = PdfViewerController();
     _loadSavedState();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSavedState() async {
@@ -70,25 +65,23 @@ class _QuranScreenState extends State<QuranScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_pageController.hasClients) {
-        _pageController.jumpToPage(_currentPage - 1);
-      }
+      _pdfViewerController.jumpToPage(_currentPage);
     });
   }
 
-  Future<void> _onPageSwiped(int index) async {
-    int pageNum = index + 1;
+  Future<void> _onPageChanged(PdfPageChangedDetails details) async {
+    int pageNum = details.newPageNumber;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('quran_last_read_page', pageNum);
 
-    // দৈনিক ২ পৃষ্ঠা পড়ার প্রগ্রেস ট্র্যাকিং
     if (pageNum != _currentPage) {
       int updated = (_pagesReadToday + 1).clamp(0, 2);
       await prefs.setInt('quran_read_count_$_todayKey', updated);
-      setState(() => _pagesReadToday = updated);
+      setState(() {
+        _pagesReadToday = updated;
+        _currentPage = pageNum;
+      });
     }
-
-    setState(() => _currentPage = pageNum);
   }
 
   Future<void> _toggleBookmark() async {
@@ -115,17 +108,16 @@ class _QuranScreenState extends State<QuranScreen> {
   }
 
   void _jumpToPage(int page) {
-    if (page < 1 || page > _totalPages) return;
-    _pageController.jumpToPage(page - 1);
+    if (page < 1 || page > _pageCount) return;
+    _pdfViewerController.jumpToPage(page);
   }
 
-  // সরাসরি পৃষ্ঠায় যাওয়ার ডায়ালগ
   void _showJumpDialog() {
     final controller = TextEditingController(text: '$_currentPage');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(widget.isBn ? 'পৃষ্ঠা নম্বরে যান (১ - ৬০৪)' : 'Go to Page (1 - 604)'),
+        title: Text(widget.isBn ? 'পৃষ্ঠা নম্বরে যান' : 'Go to Page'),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -150,7 +142,6 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
-  // সূরা ও পারার সূচিপত্র বটমশিট
   void _showIndexSheet() {
     showModalBottomSheet(
       context: context,
@@ -197,7 +188,6 @@ class _QuranScreenState extends State<QuranScreen> {
     );
   }
 
-  // সংরক্ষিত বুকমার্ক তালিকা
   void _showBookmarksSheet() {
     showModalBottomSheet(
       context: context,
@@ -250,7 +240,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'পবিত্র কুরআন (১৫ লাইন মুসহাফ)' : 'Holy Quran (15 Lines)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.isBn ? 'পবিত্র কুরআন (পিডিএফ)' : 'Holy Quran (PDF)', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
@@ -266,7 +256,7 @@ class _QuranScreenState extends State<QuranScreen> {
       ),
       body: Column(
         children: [
-          // দৈনিক ২ পৃষ্ঠা পড়ার অগ্রগতি ও পৃষ্ঠা নেভিগেশন বার
+          // দৈনিক পড়ার হিসাব
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             color: isDark ? const Color(0xFF1E2621) : const Color(0xFFE8F5E9),
@@ -284,7 +274,7 @@ class _QuranScreenState extends State<QuranScreen> {
                   ],
                 ),
                 Text(
-                  '${widget.isBn ? "পৃষ্ঠা" : "Page"}: $_currentPage / $_totalPages',
+                  '${widget.isBn ? "পৃষ্ঠা" : "Page"}: $_currentPage / $_pageCount',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ],
@@ -292,69 +282,25 @@ class _QuranScreenState extends State<QuranScreen> {
           ),
           const Divider(height: 1),
 
-          // ডানে-বামে সোয়াইপ করার জন্য অনুভূমিক PageView (Pinch-to-zoom সহ)
+          // ডানে-বামে সোয়াইপ হওয়া আসল PDF ভিউয়ার
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.horizontal,
-              itemCount: _totalPages,
-              onPageChanged: _onPageSwiped,
-              itemBuilder: (context, index) {
-                int pageNum = index + 1;
-                String pageStr = pageNum.toString().padLeft(3, '0');
-                // ১৫ লাইনের আসল মাদানি মুসহাফের হাই-রেজ্যুলেশন পৃষ্ঠা
-                String imageUrl = "https://raw.githubusercontent.com/Govar/quran-images/master/images/page$pageStr.png";
-
-                return InteractiveViewer(
-                  panEnabled: true,
-                  minScale: 1.0,
-                  maxScale: 3.5,
-                  child: Container(
-                    color: isDark ? const Color(0xFF121815) : const Color(0xFFFFFDF7),
-                    child: Center(
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (ctx, child, progress) {
-                          if (progress == null) return child;
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const CircularProgressIndicator(color: Color(0xFF0D5C3A)),
-                                const SizedBox(height: 12),
-                                Text(
-                                  widget.isBn ? 'পৃষ্ঠা $pageNum লোড হচ্ছে...' : 'Loading Page $pageNum...',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        errorBuilder: (ctx, err, stack) => Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.wifi_off, size: 50, color: Colors.grey),
-                              const SizedBox(height: 10),
-                              Text(widget.isBn ? 'পৃষ্ঠা $pageNum লোড হতে ইন্টারনেট প্রয়োজন।' : 'Internet required for page $pageNum'),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: () => setState(() {}),
-                                child: Text(widget.isBn ? 'পুনরায় চেষ্টা করুন' : 'Retry'),
-                              )
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+            child: SfPdfViewer.asset(
+              'assets/quran.pdf',
+              controller: _pdfViewerController,
+              scrollDirection: PdfScrollDirection.horizontal,
+              pageLayoutMode: PdfPageLayoutMode.single,
+              canShowScrollHead: false,
+              canShowScrollStatus: false,
+              onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                setState(() {
+                  _pageCount = details.document.pages.count;
+                });
               },
+              onPageChanged: _onPageChanged,
             ),
           ),
 
-          // নিচে দ্রুত পৃষ্ঠা পরিবর্তনের বোতাম
+          // নিচে পৃষ্ঠা পরিবর্তনের সহজ কন্ট্রোল বার
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             color: isDark ? const Color(0xFF1E2621) : Colors.white,
@@ -372,7 +318,7 @@ class _QuranScreenState extends State<QuranScreen> {
                   label: Text(widget.isBn ? 'পৃষ্ঠা পরিবর্তন' : 'Go to Page'),
                 ),
                 TextButton.icon(
-                  onPressed: _currentPage < _totalPages ? () => _jumpToPage(_currentPage + 1) : null,
+                  onPressed: _currentPage < _pageCount ? () => _jumpToPage(_currentPage + 1) : null,
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
                   label: Text(widget.isBn ? 'পরের পৃষ্ঠা' : 'Next'),
                 ),
