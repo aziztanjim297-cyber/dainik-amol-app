@@ -22,31 +22,20 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Generate Android Scaffolding & System Permissions
+      - name: Generate Android Scaffolding
         run: |
           flutter create --project-name dainik_amol --org com.aziztanjim.dainikamol temp_scaffold
           cp -r temp_scaffold/android ./android
           rm -rf temp_scaffold
 
-          # Kotlin সংস্করণ 1.9.22 ফিক্স
-          if [ -f android/build.gradle ]; then
-            sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
-          fi
-          if [ -f android/settings.gradle ]; then
-            sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
-          fi
+      - name: Configure Kotlin Version
+        run: |
+          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
+          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
 
-          # অ্যান্ড্রয়েড অ্যালার্ম, নোটিফিকেশন ও সিস্টেম সাউন্ড পারমিশন যুক্ত করা
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            sed -i '/<manifest/a \
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>\
-    <uses-permission android:name="android.permission.VIBRATE"\/>\
-    <uses-permission android:name="android.permission.WAKE_LOCK"\/>\
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>' "$MANIFEST_FILE"
-          fi
+      - name: Inject Android Permissions
+        run: |
+          python3 -c "f=open('android/app/src/main/AndroidManifest.xml','r');s=f.read();f.close();p='<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>\n<uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.VIBRATE\"/>\n<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>\n<uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>\n';s=s.replace('<application',p+'<application');f=open('android/app/src/main/AndroidManifest.xml','w');f.write(s);f.close()"
 
       - name: Install Dependencies
         run: flutter pub get
