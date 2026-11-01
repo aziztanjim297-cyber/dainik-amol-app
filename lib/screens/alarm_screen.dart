@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 class AlarmScreen extends StatefulWidget {
   final bool isBn;
@@ -13,7 +14,7 @@ class AlarmScreen extends StatefulWidget {
 class _AlarmScreenState extends State<AlarmScreen> {
   final Map<String, bool> _alarms = {};
   final Map<String, bool> _notifications = {};
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  Timer? _alarmVibrateTimer;
   bool _isPlaying = false;
 
   final List<Map<String, String>> prayerAlarms = [
@@ -44,7 +45,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _stopAlarm();
     super.dispose();
   }
 
@@ -72,15 +73,22 @@ class _AlarmScreenState extends State<AlarmScreen> {
     setState(() => _notifications[id] = val);
   }
 
-  // আযান ও অ্যালার্ম বাজানো (অনলাইন ইসলামিক আযান অডিও)
-  Future<void> _playAdhanAlarm() async {
+  // ফোনের আসল সিস্টেম অ্যালার্ট সাউন্ড ও হার্ডওয়্যার ভাইব্রেশন অ্যালার্ম
+  void _playSystemAlarm() {
     setState(() => _isPlaying = true);
-    try {
-      // পবিত্র মক্কা শরীফের আযানের সুর
-      await _audioPlayer.play(UrlSource('https://media.sd.ma/assabile/adhan_3742/al-azhar.mp3'));
-    } catch (_) {}
+    SystemSound.play(SystemSoundType.alert);
+    HapticFeedback.heavyImpact();
 
-    if (!mounted) return;
+    _alarmVibrateTimer?.cancel();
+    _alarmVibrateTimer = Timer.periodic(const Duration(milliseconds: 700), (timer) {
+      if (!_isPlaying) {
+        timer.cancel();
+      } else {
+        SystemSound.play(SystemSoundType.alert);
+        HapticFeedback.heavyImpact();
+      }
+    });
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -88,9 +96,9 @@ class _AlarmScreenState extends State<AlarmScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.alarm_on, color: Color(0xFF0D5C3A), size: 28),
+            const Icon(Icons.alarm_on, color: Colors.deepOrange, size: 28),
             const SizedBox(width: 8),
-            Text(widget.isBn ? 'নামাজের আযান বাজছে' : 'Prayer Adhan Playing'),
+            Text(widget.isBn ? 'নামাজের অ্যালার্ম বাজছে!' : 'Prayer Alarm Ringing!'),
           ],
         ),
         content: Column(
@@ -101,24 +109,41 @@ class _AlarmScreenState extends State<AlarmScreen> {
               widget.isBn ? 'حي على الصلاة • নামাজের সময় হয়েছে!' : 'Hayya \'alas-Salah • Time for Prayer!',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A)),
             ),
-            const SizedBox(height: 8),
-            Text(widget.isBn ? 'অ্যালার্ম সাউন্ড সফলভাবে বাজছে। আযান বন্ধ করতে নিচের বাটনে চাপ দিন।' : 'Alarm sound is playing. Tap below to stop.'),
+            const SizedBox(height: 10),
+            Text(
+              widget.isBn
+                  ? 'আপনার ফোনের সিস্টেম অ্যালার্ট ও ভাইব্রেশন সফলভাবে সক্রিয় হয়েছে। অ্যালার্ম বন্ধ করতে নিচের বাটনে চাপ দিন।'
+                  : 'Your phone alert tone and vibration are active. Tap below to stop.',
+              style: const TextStyle(fontSize: 13),
+            ),
           ],
         ),
         actions: [
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             icon: const Icon(Icons.stop),
-            label: Text(widget.isBn ? 'আযান বন্ধ করুন' : 'Stop Adhan'),
-            onPressed: () async {
-              await _audioPlayer.stop();
-              setState(() => _isPlaying = false);
+            label: Text(widget.isBn ? 'অ্যালার্ম বন্ধ করুন' : 'Stop Alarm'),
+            onPressed: () {
+              _stopAlarm();
               Navigator.pop(ctx);
             },
           ),
         ],
       ),
     );
+  }
+
+  void _playSystemNotification() {
+    SystemSound.play(SystemSoundType.alert);
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(widget.isBn ? 'সিস্টেম নোটিফিকেশন সাউন্ড ও ভাইব্রেশন সক্রিয়!' : 'System alert tone triggered!')),
+    );
+  }
+
+  void _stopAlarm() {
+    _alarmVibrateTimer?.cancel();
+    if (mounted) setState(() => _isPlaying = false);
   }
 
   @override
@@ -143,24 +168,39 @@ class _AlarmScreenState extends State<AlarmScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.notifications_active, color: Color(0xFF0D5C3A), size: 22),
+                      const Icon(Icons.security, color: Color(0xFF0D5C3A), size: 22),
                       const SizedBox(width: 8),
-                      Text(widget.isBn ? 'নামাজের আযান ও অ্যালার্ম টেস্ট' : 'Adhan & Sound Test', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+                      Text(widget.isBn ? 'সিস্টেম এক্সেস ও অ্যালার্ম টেস্ট' : 'System Access & Test', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     widget.isBn
-                        ? 'ওয়াক্তের শুরুতে আযানের সুর বাজাতে অ্যালার্ম সক্রিয় রাখুন।'
-                        : 'Keep alarms active to hear adhan tone at prayer times.',
+                        ? 'ওয়াক্ত অনুযায়ী সিস্টেম অ্যালার্ট ও ভাইব্রেশন নিশ্চিত করতে নিচের বাটন দিয়ে পরীক্ষা করুন।'
+                        : 'Test system alert sound and hardware vibration for prayers.',
                     style: const TextStyle(fontSize: 12, color: Colors.black87),
                   ),
-                  const Divider(height: 16),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(widget.isBn ? 'আযান সাউন্ড টেস্ট করুন' : 'Test Adhan Sound'),
-                    onPressed: _playAdhanAlarm,
+                  const Divider(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
+                          icon: const Icon(Icons.alarm, size: 18),
+                          label: Text(widget.isBn ? 'অ্যালার্ম বাজান' : 'Test Alarm'),
+                          onPressed: _playSystemAlarm,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0D5C3A)),
+                          icon: const Icon(Icons.notifications_active, size: 18),
+                          label: Text(widget.isBn ? 'নোটিফিকেশন' : 'Test Tone'),
+                          onPressed: _playSystemNotification,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -168,7 +208,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
           ),
           const SizedBox(height: 16),
 
-          Text(widget.isBn ? 'নামাজের অ্যালার্ম (Alarm System)' : 'Prayer Alarms', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+          Text(widget.isBn ? 'নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)' : 'Prayer Alarms', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...prayerAlarms.map((a) {
             bool isSet = _alarms[a['id']] ?? true;
