@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
 class AlarmScreen extends StatefulWidget {
   final bool isBn;
@@ -12,6 +13,7 @@ class AlarmScreen extends StatefulWidget {
 class _AlarmScreenState extends State<AlarmScreen> {
   final Map<String, bool> _alarms = {};
   final Map<String, bool> _notifications = {};
+  bool _isPlayingAlarm = false;
 
   final List<Map<String, String>> prayerAlarms = [
     {'id': 'alarm_tahajjud', 'titleBn': 'তাহাজ্জুদ অ্যালার্ম (ফজরের পূর্বে)', 'titleEn': 'Tahajjud Alarm (Before Fajr)'},
@@ -39,6 +41,12 @@ class _AlarmScreenState extends State<AlarmScreen> {
     _loadAlarmSettings();
   }
 
+  @override
+  void dispose() {
+    _stopSound();
+    super.dispose();
+  }
+
   Future<void> _loadAlarmSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -63,16 +71,25 @@ class _AlarmScreenState extends State<AlarmScreen> {
     setState(() => _notifications[id] = val);
   }
 
-  void _showTestAlarmDialog() {
+  // ফোনের আসল সিস্টেম অ্যালার্ম সাউন্ড বাজানো
+  void _playSystemAlarm() {
+    setState(() => _isPlayingAlarm = true);
+    FlutterRingtonePlayer().playAlarm(
+      volume: 1.0,
+      looping: true,
+      asAlarm: true,
+    );
+
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.alarm_on, color: Color(0xFF0D5C3A), size: 28),
+            const Icon(Icons.alarm_on, color: Colors.deepOrange, size: 30),
             const SizedBox(width: 8),
-            Text(widget.isBn ? 'নামাজের অ্যালার্ম টেস্ট' : 'Prayer Alarm Test'),
+            Text(widget.isBn ? 'ফোনের আসল অ্যালার্ম বাজছে!' : 'Phone Alarm Ringing!'),
           ],
         ),
         content: Column(
@@ -80,55 +97,106 @@ class _AlarmScreenState extends State<AlarmScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isBn ? 'حي على الصلاة • নামাজের সময় হয়েছে!' : 'Hayya \'alas-Salah • Time for Prayer!',
+              widget.isBn ? 'حي على الصلاة • নামাজের অ্যালার্ম!' : 'Hayya \'alas-Salah • Time for Prayer!',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A)),
             ),
-            const SizedBox(height: 8),
-            Text(widget.isBn ? 'অ্যালার্ম রিংটোন এবং আযানের নোটিফিকেশন সক্রিয় রয়েছে।' : 'Adhan audio and notification alarm system is active.'),
+            const SizedBox(height: 10),
+            Text(
+              widget.isBn
+                  ? 'আপনার ফোনের নিজস্ব সিস্টেম অ্যালার্ম রিংটোনটি সফলভাবে বাজছে। এটি বন্ধ করতে নিচের বাটনে চাপ দিন।'
+                  : 'Your phone\'s native alarm ringtone is playing. Tap below to stop.',
+              style: const TextStyle(fontSize: 13),
+            ),
           ],
         ),
         actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(widget.isBn ? 'বন্ধ করুন' : 'Dismiss'),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            icon: const Icon(Icons.stop),
+            label: Text(widget.isBn ? 'অ্যালার্ম বন্ধ করুন' : 'Stop Alarm'),
+            onPressed: () {
+              _stopSound();
+              Navigator.pop(ctx);
+            },
           ),
         ],
       ),
     );
   }
 
+  // ফোনের আসল নোটিফিকেশন সাউন্ড বাজানো
+  void _playSystemNotification() {
+    FlutterRingtonePlayer().playNotification(
+      volume: 1.0,
+      looping: false,
+      asAlarm: false,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(widget.isBn ? 'ফোনের আসল নোটিফিকেশন সাউন্ড বাজানো হয়েছে!' : 'System notification tone played!')),
+    );
+  }
+
+  void _stopSound() {
+    FlutterRingtonePlayer().stop();
+    if (mounted) setState(() => _isPlayingAlarm = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'অ্যালার্ম ও নোটিফিকেশন' : 'Alarms & Notifications', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(widget.isBn ? 'অ্যালার্ম ও নোটিফিকেশন এক্সেস' : 'Alarms & Access', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // অ্যালার্ম টেস্ট কার্ড
+          // ফোনের পারমিশন ও এক্সেস কার্ড
           Card(
             color: const Color(0xFFE8F5E9),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(widget.isBn ? 'অ্যালার্ম পরীক্ষা করুন' : 'Test Alarm Sound', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D5C3A))),
-                      Text(widget.isBn ? 'আযান ও অ্যালার্ট বাজিয়ে দেখুন' : 'Play preview adhan alarm', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      const Icon(Icons.security, color: Color(0xFF0D5C3A), size: 22),
+                      const SizedBox(width: 8),
+                      Text(widget.isBn ? 'ফোনের এক্সেস ও সাউন্ড টেস্ট' : 'System Access & Sound Test', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
                     ],
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
-                    icon: const Icon(Icons.volume_up, size: 18),
-                    label: Text(widget.isBn ? 'টেস্ট' : 'Test'),
-                    onPressed: _showTestAlarmDialog,
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.isBn
+                        ? 'এই অ্যাপটি আপনার ফোনের ডিফল্ট অ্যালার্ম রিংটোন এবং নোটিফিকেশন টিউন ব্যবহার করার সম্পূর্ণ এক্সেস রাখে।'
+                        : 'This app accesses your device\'s native system alarm tones and notification channels.',
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                  const Divider(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
+                          icon: const Icon(Icons.alarm, size: 18),
+                          label: Text(widget.isBn ? 'অ্যালার্ম বাজান' : 'Test Alarm'),
+                          onPressed: _playSystemAlarm,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0D5C3A)),
+                          icon: const Icon(Icons.notifications_active, size: 18),
+                          label: Text(widget.isBn ? 'নোটিফিকেশন টিউন' : 'Test Tone'),
+                          onPressed: _playSystemNotification,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -137,7 +205,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
           const SizedBox(height: 16),
 
           // ১. গুরুত্বপূর্ণ নামাজের অ্যালার্ম
-          Text(widget.isBn ? 'নামাজের অ্যালার্ম (Alarm System)' : 'Prayer Alarms', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+          Text(widget.isBn ? 'নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)' : 'Prayer Alarms (Ringtone)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...prayerAlarms.map((a) {
             bool isSet = _alarms[a['id']] ?? true;
@@ -146,6 +214,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
               child: SwitchListTile(
                 secondary: Icon(isSet ? Icons.alarm_on : Icons.alarm_off, color: isSet ? const Color(0xFF0D5C3A) : Colors.grey),
                 title: Text(widget.isBn ? a['titleBn']! : a['titleEn']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(widget.isBn ? 'ফোনের রিংটোনে বাজবে' : 'Rings phone alarm tone', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 value: isSet,
                 activeColor: const Color(0xFF0D5C3A),
                 onChanged: (val) => _toggleAlarm(a['id']!, val),
@@ -156,7 +225,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
           const SizedBox(height: 20),
 
           // ২. আমল নোটিফিকেশন
-          Text(widget.isBn ? 'আমলের সাধারণ নোটিফিকেশন (Reminders)' : 'Amal Reminders', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+          Text(widget.isBn ? 'আমলের নোটিফিকেশন (Notification Tune)' : 'Amal Notification Tunes', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...amalNotifications.map((n) {
             bool isSet = _notifications[n['id']] ?? true;
@@ -165,6 +234,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
               child: SwitchListTile(
                 secondary: Icon(isSet ? Icons.notifications_active : Icons.notifications_off, color: isSet ? Colors.teal : Colors.grey),
                 title: Text(widget.isBn ? n['titleBn']! : n['titleEn']!, style: const TextStyle(fontWeight: FontWeight.w500)),
+                subtitle: Text(widget.isBn ? 'ফোনের নোটিফিকেশন সাউন্ডে আসবে' : 'Plays system notification tone', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 value: isSet,
                 activeColor: Colors.teal,
                 onChanged: (val) => _toggleNotification(n['id']!, val),

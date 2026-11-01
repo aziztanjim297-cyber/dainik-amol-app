@@ -22,19 +22,30 @@ jobs:
           flutter-version: '3.24.0'
           channel: 'stable'
 
-      - name: Generate Android Scaffolding & Fix Kotlin Version
+      - name: Generate Android Scaffolding & System Permissions
         run: |
-          # অ্যান্ড্রয়েড ফাইল তৈরি করা
           flutter create --project-name dainik_amol --org com.aziztanjim.dainikamol temp_scaffold
           cp -r temp_scaffold/android ./android
           rm -rf temp_scaffold
 
-          # Kotlin সংস্করণ 1.9.22-এ আপডেট করা
+          # Kotlin সংস্করণ 1.9.22 ফিক্স
           if [ -f android/build.gradle ]; then
             sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
           fi
           if [ -f android/settings.gradle ]; then
             sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
+          fi
+
+          # অ্যান্ড্রয়েড অ্যালার্ম, নোটিফিকেশন ও সিস্টেম সাউন্ড পারমিশন যুক্ত করা
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_FILE" ]; then
+            sed -i '/<manifest/a \
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"\/>\
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"\/>\
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"\/>\
+    <uses-permission android:name="android.permission.VIBRATE"\/>\
+    <uses-permission android:name="android.permission.WAKE_LOCK"\/>\
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"\/>' "$MANIFEST_FILE"
           fi
 
       - name: Install Dependencies
