@@ -71,10 +71,10 @@ class _AlarmScreenState extends State<AlarmScreen> {
     setState(() => _notifications[id] = val);
   }
 
-  // ফোনের আসল সিস্টেম অ্যালার্ম সাউন্ড বাজানো
+  // ফোনের আসল সিস্টেম অ্যালার্ম সাউন্ড বাজানো (সঠিক স্ট্যাটিক মেথড)
   void _playSystemAlarm() {
     setState(() => _isPlayingAlarm = true);
-    FlutterRingtonePlayer().playAlarm(
+    FlutterRingtonePlayer.playAlarm(
       volume: 1.0,
       looping: true,
       asAlarm: true,
@@ -124,9 +124,9 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-  // ফোনের আসল নোটিফিকেশন সাউন্ড বাজানো
+  // ফোনের আসল নোটিফিকেশন সাউন্ড বাজানো (সঠিক স্ট্যাটিক মেথড)
   void _playSystemNotification() {
-    FlutterRingtonePlayer().playNotification(
+    FlutterRingtonePlayer.playNotification(
       volume: 1.0,
       looping: false,
       asAlarm: false,
@@ -137,7 +137,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   void _stopSound() {
-    FlutterRingtonePlayer().stop();
+    FlutterRingtonePlayer.stop();
     if (mounted) setState(() => _isPlayingAlarm = false);
   }
 
@@ -152,7 +152,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ফোনের পারমিশন ও এক্সেস কার্ড
           Card(
             color: const Color(0xFFE8F5E9),
             elevation: 2,
@@ -204,7 +203,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ১. গুরুত্বপূর্ণ নামাজের অ্যালার্ম
           Text(widget.isBn ? 'নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)' : 'Prayer Alarms (Ringtone)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...prayerAlarms.map((a) {
@@ -224,7 +222,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
           const SizedBox(height: 20),
 
-          // ২. আমল নোটিফিকেশন
           Text(widget.isBn ? 'আমলের নোটিফিকেশন (Notification Tune)' : 'Amal Notification Tunes', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...amalNotifications.map((n) {
