@@ -22,23 +22,41 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('সেটিংস ও পরিচিতি', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isBn ? 'সেটিংস ও পরিচিতি' : 'Settings & About', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ৩ & ১৫. মাজহাব নির্বাচন
+          // ১. ভাষা নির্বাচন (Language Toggle)
+          ListTile(
+            leading: const Icon(Icons.language, color: Color(0xFF0D5C3A)),
+            title: Text(isBn ? 'অ্যাপের ভাষা (Language)' : 'App Language'),
+            subtitle: Text(isBn ? 'বর্তমান: বাংলা' : 'Current: English'),
+            trailing: DropdownButton<String>(
+              value: isBn ? 'bn' : 'en',
+              items: const [
+                DropdownMenuItem(value: 'bn', child: Text('বাংলা')),
+                DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
+              onChanged: (val) {
+                if (val != null) onLanguageChanged(val);
+              },
+            ),
+          ),
+          const Divider(),
+
+          // ২. নামাজের মাজহাব নির্বাচন
           ListTile(
             leading: const Icon(Icons.mosque, color: Color(0xFF0D5C3A)),
-            title: const Text('নামাজের মাজহাব (আসরের ওয়াক্ত গণনা)'),
-            subtitle: Text(madhab == 'hanafi' ? 'হানাফি মাজহাব (বর্তমানে সক্রিয়)' : 'শাফেয়ী / অন্যান্য'),
+            title: Text(isBn ? 'নামাজের মাজহাব (আসরের সময়)' : 'Prayer Madhab (Asr)'),
+            subtitle: Text(madhab == 'hanafi' ? (isBn ? 'হানাফি মাজহাব' : 'Hanafi') : (isBn ? 'শাফেয়ী / অন্যান্য' : 'Shafi / Others')),
             trailing: DropdownButton<String>(
               value: madhab,
-              items: const [
-                DropdownMenuItem(value: 'hanafi', child: Text('হানাফি')),
-                DropdownMenuItem(value: 'shafi', child: Text('শাফেয়ী / অন্যান্য')),
+              items: [
+                DropdownMenuItem(value: 'hanafi', child: Text(isBn ? 'হানাফি' : 'Hanafi')),
+                DropdownMenuItem(value: 'shafi', child: Text(isBn ? 'শাফেয়ী' : 'Shafi')),
               ],
               onChanged: (val) {
                 if (val != null) onMadhabChanged(val);
@@ -46,15 +64,17 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const Divider(),
+
+          // ৩. থিম নির্বাচন
           ListTile(
             leading: const Icon(Icons.brightness_6, color: Color(0xFF0D5C3A)),
-            title: const Text('থিম নির্বাচন'),
+            title: Text(isBn ? 'থিম নির্বাচন' : 'Theme Mode'),
             trailing: DropdownButton<ThemeMode>(
               value: themeMode,
-              items: const [
-                DropdownMenuItem(value: ThemeMode.system, child: Text('সিস্টেম')),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('লাইট')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('ডার্ক')),
+              items: [
+                DropdownMenuItem(value: ThemeMode.system, child: Text(isBn ? 'সিস্টেম' : 'System')),
+                DropdownMenuItem(value: ThemeMode.light, child: Text(isBn ? 'লাইট' : 'Light')),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text(isBn ? 'ডার্ক' : 'Dark')),
               ],
               onChanged: (val) {
                 if (val != null) onThemeChanged(val);
@@ -62,21 +82,26 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const Divider(),
-          // ১৩. About App / অ্যাপ পরিচিতি
+
+          // ৪. অ্যাপ পরিচিতি (About App)
           ListTile(
             leading: const Icon(Icons.info_outline, color: Color(0xFF0D5C3A)),
-            title: const Text('অ্যাপ পরিচিতি (About App)'),
-            subtitle: const Text('দৈনন্দিন আমল v1.1.0 • গোপনীয়তা ও তথ্য'),
+            title: Text(isBn ? 'অ্যাপ পরিচিতি (About App)' : 'About App'),
+            subtitle: const Text('দৈনন্দিন আমল v1.1.1'),
             onTap: () {
               showAboutDialog(
                 context: context,
                 applicationName: 'দৈনন্দিন আমল',
-                applicationVersion: '1.1.0+2',
+                applicationVersion: '1.1.1',
                 applicationIcon: const Icon(Icons.menu_book, color: Color(0xFF0D5C3A), size: 40),
-                children: const [
-                  Text('উদ্দেশ্য: একজন মুসলিমের পাঁচ ওয়াক্ত নামাজ কেন্দ্রিক ব্যক্তিগত আমল পরিচালনা ও সংরক্ষণের নির্ভরযোগ্য সহযোগী।'),
-                  SizedBox(height: 8),
-                  Text('ডেভেলপমেন্ট: সম্পূর্ণ অফলাইন ডাটাবেজ সমর্থিত এবং গোপনীয়তা সম্পূর্ণ সুরক্ষিত।'),
+                children: [
+                  Text(isBn
+                      ? 'উদ্দেশ্য: একজন মুসলিমের পাঁচ ওয়াক্ত নামাজ কেন্দ্রিক ব্যক্তিগত আমল পরিচালনা ও সংরক্ষণের নির্ভরযোগ্য সহযোগী।'
+                      : 'Purpose: A dedicated companion for managing and preserving a Muslim\'s daily prayers and righteous deeds.'),
+                  const SizedBox(height: 8),
+                  Text(isBn
+                      ? 'বৈশিষ্ট্য: হানাফি ও শাফেয়ী ওয়াক্ত, সময়ভিত্তিক আমল লক, কুরআন ও হাদিস রিডার এবং ডিজিটাল তাসবিহ।'
+                      : 'Features: Accurate prayer times, time-locked amals, Quran & Hadith readers, and digital tasbih.'),
                 ],
               );
             },
