@@ -33,15 +33,22 @@ class _QuranScreenState extends State<QuranScreen> {
 
     final last = prefs.getInt('quran_last_page') ?? 2;
     final bMarks = prefs.getStringList('quran_bmarks') ?? [];
+    final oldMarks = prefs.getStringList('quran_bookmarks_list') ?? [];
+    final allMarks = {
+      ...bMarks.map((e) => int.tryParse(e)).whereType<int>(),
+      ...oldMarks.map((e) => int.tryParse(e)).whereType<int>(),
+    };
+
+    await prefs.setStringList(
+      'quran_bmarks',
+      allMarks.map((e) => e.toString()).toList(),
+    );
 
     if (!mounted) return;
 
     setState(() {
       _currentPage = last;
-      _bookmarks = bMarks
-          .map((e) => int.tryParse(e))
-          .whereType<int>()
-          .toSet();
+      _bookmarks = allMarks;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,6 +87,91 @@ class _QuranScreenState extends State<QuranScreen> {
     await prefs.setStringList(
       'quran_bmarks',
       _bookmarks.map((e) => e.toString()).toList(),
+    );
+  }
+
+  void _showBookmarksSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final pages = _bookmarks.toList()..sort();
+
+          return Container(
+            padding: const EdgeInsets.all(16),
+            height: MediaQuery.of(ctx).size.height * 0.65,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'সংরক্ষিত বুকমার্কসমূহ',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D5C3A),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                if (pages.isEmpty)
+                  const Expanded(
+                    child: Center(child: Text('কোনো পৃষ্ঠা বুকমার্ক করা নেই')),
+                  )
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: pages.length,
+                      itemBuilder: (ctx, index) {
+                        final page = pages[index];
+                        return ListTile(
+                          leading: const Icon(
+                            Icons.bookmark,
+                            color: Color(0xFF0D5C3A),
+                          ),
+                          title: Text(
+                            'পৃষ্ঠা নম্বর $page',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                            ),
+                            onPressed: () async {
+                              setState(() => _bookmarks.remove(page));
+                              setModalState(() {});
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setStringList(
+                                'quran_bmarks',
+                                _bookmarks.map((e) => e.toString()).toList(),
+                              );
+                            },
+                          ),
+                          onTap: () {
+                            _jump(page);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -249,6 +341,11 @@ class _QuranScreenState extends State<QuranScreen> {
             icon: const Icon(Icons.pin_invoke),
             tooltip: 'পৃষ্ঠায় যান',
             onPressed: _showJumpDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.bookmarks),
+            tooltip: 'বুকমার্ক তালিকা',
+            onPressed: _showBookmarksSheet,
           ),
           IconButton(
             icon: Icon(

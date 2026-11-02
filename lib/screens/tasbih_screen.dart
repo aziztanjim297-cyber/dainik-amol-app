@@ -225,6 +225,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final goalCompleted =
+        _targetGoal > 0 && _sessionCounter >= _targetGoal;
 
     if (_loading) {
       return const Scaffold(
@@ -323,12 +325,15 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 height: 230,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark
-                      ? const Color(0xFF1B8E5B)
-                      : const Color(0xFF0D5C3A),
+                  color: goalCompleted
+                      ? Colors.red
+                      : (isDark
+                          ? const Color(0xFF1B8E5B)
+                          : const Color(0xFF0D5C3A)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.green.withOpacity(0.35),
+                      color: (goalCompleted ? Colors.red : Colors.green)
+                          .withOpacity(0.35),
                       blurRadius: 25,
                       spreadRadius: 8,
                     ),
@@ -367,12 +372,10 @@ class _TasbihScreenState extends State<TasbihScreen> {
               onPressed: _resetSession,
               icon: const Icon(Icons.refresh, color: Colors.red),
               label: Text(
-                widget.isBn
-                    ? 'রাউন্ড রিসেট (বৃত্ত ০ করুন)'
-                    : 'Reset Round',
+                widget.isBn ? 'রিসেট' : 'Reset',
                 style: const TextStyle(
                   color: Colors.red,
-                  fontSize: 15,
+                  fontSize: 14,
                 ),
               ),
             ),
