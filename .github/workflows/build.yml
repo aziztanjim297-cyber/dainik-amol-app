@@ -77,23 +77,35 @@ jobs:
         run: |
           python3 - <<'PYTHON'
           from pathlib import Path
+          import re
 
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
 
-          permissions = """<uses-permission android:name="android.permission.INTERNET"/>
-          <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-          <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-          <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-          <uses-permission android:name="android.permission.VIBRATE"/>
-          <uses-permission android:name="android.permission.WAKE_LOCK"/>
-          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-          """
+          permissions = [
+              "android.permission.INTERNET",
+              "android.permission.ACCESS_FINE_LOCATION",
+              "android.permission.ACCESS_COARSE_LOCATION",
+              "android.permission.POST_NOTIFICATIONS",
+              "android.permission.SCHEDULE_EXACT_ALARM",
+              "android.permission.USE_EXACT_ALARM",
+              "android.permission.VIBRATE",
+              "android.permission.WAKE_LOCK",
+              "android.permission.RECEIVE_BOOT_COMPLETED",
+          ]
 
-          if "android.permission.INTERNET" not in s:
-              s = s.replace("<application", permissions + "<application", 1)
+          match = re.search(r"<manifest\\b[^>]*>", s)
+          if not match:
+              raise SystemExit("Manifest opening tag পাওয়া যায়নি")
 
+          additions = ""
+          for permission in permissions:
+              if f'android:name="{permission}"' not in s:
+                  additions += f'\\n    <uses-permission android:name="{permission}"/>'
+
+          s = s[:match.end()] + additions + s[match.end():]
           p.write_text(s)
+          print("Android permissions configured successfully")
           PYTHON
       - name: Install Dependencies
         run: flutter pub get

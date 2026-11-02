@@ -127,23 +127,40 @@ class _LocationSettingsScreenState
   }
 
   Future<void> _useGps() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _message = '';
     });
+
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        throw Exception('GPS বন্ধ রয়েছে।');
+        throw Exception('ফোনের Location/GPS চালু করুন।');
       }
+
       var permission = await Geolocator.checkPermission();
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw Exception('লোকেশন অনুমতি পাওয়া যায়নি।');
+
+      if (permission == LocationPermission.denied) {
+        throw Exception('লোকেশন অনুমতি দেওয়া হয়নি।');
       }
-      final pos = await Geolocator.getCurrentPosition();
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+          'লোকেশন অনুমতি স্থায়ীভাবে বন্ধ। ফোনের App Settings থেকে অনুমতি দিন।',
+        );
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 30),
+        ),
+      );
+
       await _saveLocation(
         mode: 'gps',
         label: 'GPS',
@@ -155,6 +172,9 @@ class _LocationSettingsScreenState
         setState(() {
           _loading = false;
           _message = e.toString().replaceFirst('Exception: ', '');
+          if (_message.contains('TimeoutException')) {
+            _message = '৩০ সেকেন্ডেও GPS অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন।';
+          }
         });
       }
     }
