@@ -785,15 +785,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _timeRangeRow(String title, DateTime start, DateTime end) {
+    final now = DateTime.now();
+    final isMakruh = !now.isBefore(start) && now.isBefore(end);
+    final color = isMakruh ? Colors.red : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              color: color,
+              fontWeight: isMakruh ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
           Text(
             '${DateFormat('hh:mm a').format(start)} - ${DateFormat('hh:mm a').format(end)}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: color,
+            ),
           ),
         ],
       ),
