@@ -61,74 +61,67 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
   Future<void> _initializeLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString('location_mode');
+    final lat = prefs.getDouble('location_lat');
+    final lon = prefs.getDouble('location_lon');
+
+    if (mode != null && lat != null && lon != null) {
+      _coords = Coordinates(lat, lon);
+      _locationMessage = prefs.getString('location_label') ?? '';
+      _loadingLocation = false;
+      _initTimes();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (mode == 'country') {
+      _setLocationFallback(
+        widget.isBn
+            ? 'শুধু দেশের নাম দিয়ে নামাজের সময় নির্ণয় সম্ভব নয়। GPS নির্বাচন করুন।'
+            : 'Country alone is insufficient. Select GPS location.',
+      );
+      return;
+    }
+
     try {
-      bool serviceEnabled =
-          await Geolocator.isLocationServiceEnabled();
-
-      if (!serviceEnabled) {
-        _setLocationFallback(
-          widget.isBn
-              ? 'লোকেশন সার্ভিস বন্ধ'
-              : 'Location service is disabled',
-        );
-        return;
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw Exception();
       }
-
-      LocationPermission permission =
-          await Geolocator.checkPermission();
-
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        _setLocationFallback(
-          widget.isBn
-              ? 'লোকেশন অনুমতি পাওয়া যায়নি'
-              : 'Location permission denied',
-        );
-        return;
+        throw Exception();
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-        ),
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _coords = Coordinates(
-          position.latitude,
-          position.longitude,
-        );
-        _locationMessage =
-            widget.isBn ? 'বর্তমান অবস্থান ব্যবহার হচ্ছে' : 'Using current location';
-        _loadingLocation = false;
-      });
-
+      final pos = await Geolocator.getCurrentPosition();
+      _coords = Coordinates(pos.latitude, pos.longitude);
+      _locationMessage = widget.isBn ? 'বর্তমান GPS অবস্থান' : 'Current GPS location';
+      await prefs.setString('location_mode', 'gps');
+      await prefs.setDouble('location_lat', pos.latitude);
+      await prefs.setDouble('location_lon', pos.longitude);
+      await prefs.setString('location_label', _locationMessage);
+      _loadingLocation = false;
       _initTimes();
-    } catch (e) {
+      if (mounted) setState(() {});
+    } catch (_) {
       _setLocationFallback(
-        widget.isBn
-            ? 'লোকেশন পাওয়া যায়নি'
-            : 'Unable to get location',
+        widget.isBn ? 'লোকেশন পাওয়া যায়নি। সেটিংস থেকে GPS বা অবস্থান নির্বাচন করুন।' : 'Location unavailable. Select a location in Settings.',
       );
     }
   }
 
   void _setLocationFallback(String message) {
     if (!mounted) return;
-
     setState(() {
-      _coords = Coordinates(22.3596, 90.3298);
+      _coords = null;
+      prayerTimes = null;
       _locationMessage = message;
       _loadingLocation = false;
     });
-
-    _initTimes();
   }
 
   CalculationParameters _getParams() {
@@ -755,6 +748,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     _timeRow(widget.isBn ? 'আসর' : 'Asr', prayerTimes!.asr),
                     _timeRow(widget.isBn ? 'সূর্যাস্ত ও মাগরিব' : 'Sunset & Maghrib', prayerTimes!.maghrib),
                     _timeRow(widget.isBn ? 'ইশা' : 'Isha', prayerTimes!.isha),
+                    const Divider(height: 20),
+                    Text(
+                      widget.isBn ? 'মাকরুহ ওয়াক্ত' : 'Makruh Times',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    _timeRangeRow(
+                      widget.isBn ? 'সূর্যোদয়' : 'Sunrise',
+                      prayerTimes!.sunrise,
+                      prayerTimes!.sunrise.add(const Duration(minutes: 15)),
+                    ),
+                    _timeRangeRow(
+                      widget.isBn ? 'যাওয়াল (সতর্কতামূলক)' : 'Zawal (precaution)',
+                      prayerTimes!.dhuhr.subtract(const Duration(minutes: 5)),
+                      prayerTimes!.dhuhr,
+                    ),
+                    _timeRangeRow(
+                      widget.isBn ? 'সূর্যাস্ত' : 'Sunset',
+                      prayerTimes!.maghrib.subtract(const Duration(minutes: 15)),
+                      prayerTimes!.maghrib,
+                    ),
+                    Text(
+                      widget.isBn
+                          ? 'সময়গুলো আনুমানিক; স্থানীয় নির্ভরযোগ্য সময়সূচির সঙ্গে মিলিয়ে নিন।'
+                          : 'Times are approximate; verify with a reliable local timetable.',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
                   ],
                 ),
               ),
@@ -762,6 +781,22 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ),
+    );
+  }
+
+  Widget _timeRangeRow(String title, DateTime start, DateTime end) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 13)),
+          Text(
+            '${DateFormat('hh:mm a').format(start)} - ${DateFormat('hh:mm a').format(end)}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 

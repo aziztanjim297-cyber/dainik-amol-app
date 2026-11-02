@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'alarm_screen.dart';
 import 'summary_screen.dart';
+import 'location_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   final bool isBn;
@@ -9,6 +10,7 @@ class SettingsScreen extends StatelessWidget {
   final Function(ThemeMode) onThemeChanged;
   final Function(String) onLanguageChanged;
   final Function(String) onMadhabChanged;
+  final VoidCallback onLocationChanged;
 
   const SettingsScreen({
     super.key,
@@ -18,6 +20,7 @@ class SettingsScreen extends StatelessWidget {
     required this.onThemeChanged,
     required this.onLanguageChanged,
     required this.onMadhabChanged,
+    required this.onLocationChanged,
   });
 
   @override
@@ -48,6 +51,24 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(isBn ? '৫ ওয়াক্ত নামাজ, তাহাজ্জুদ ও আমলের অ্যালার্ম' : 'Manage prayer adhan & reminders'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: isBn))),
+          ),
+          const Divider(),
+
+          // নামাজের সময়ের জন্য অবস্থান নির্বাচন
+          ListTile(
+            leading: const Icon(Icons.location_on, color: Color(0xFF0D5C3A)),
+            title: Text(isBn ? 'নামাজের সময়ের অবস্থান' : 'Prayer Time Location'),
+            subtitle: Text(isBn ? 'জিপিএস অথবা দেশ, জেলা ও উপজেলা নির্বাচন' : 'Choose GPS or country, district and upazila'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LocationSettingsScreen(
+                  isBn: isBn,
+                  onLocationChanged: onLocationChanged,
+                ),
+              ),
+            ),
           ),
           const Divider(),
 

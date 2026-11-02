@@ -1,0 +1,321 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'package:country_picker/country_picker.dart';
+
+class LocationSettingsScreen extends StatefulWidget {
+  final bool isBn;
+  final VoidCallback onLocationChanged;
+
+  const LocationSettingsScreen({
+    super.key,
+    required this.isBn,
+    required this.onLocationChanged,
+  });
+
+  @override
+  State<LocationSettingsScreen> createState() =>
+      _LocationSettingsScreenState();
+}
+
+class _LocationSettingsScreenState
+    extends State<LocationSettingsScreen> {
+  static const _districtUrl =
+      'https://raw.githubusercontent.com/open-admin-data/bangladesh-administrative-divisions/main/data/all-district.json';
+  static const _upazilaUrl =
+      'https://raw.githubusercontent.com/open-admin-data/bangladesh-administrative-divisions/main/data/all-upazila.json';
+
+  List<dynamic> _districts = [];
+  List<dynamic> _upazilas = [];
+  String? _districtId, _upazilaId, _countryCode, _countryName;
+  bool _loading = false;
+  String _message = '';
+
+  bool get isBn => widget.isBn;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedLocation();
+  }
+
+  Future<void> _loadSavedLocation() async {
+    final p = await SharedPreferences.getInstance();
+    _countryCode = p.getString('location_country_code');
+    _countryName = p.getString('location_country_name');
+    _districtId = p.getString('location_district_id');
+    _upazilaId = p.getString('location_upazila_id');
+    if (_countryCode == 'BD') await _loadAdministrativeData();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadAdministrativeData() async {
+    setState(() {
+      _loading = true;
+      _message = '';
+    });
+    try {
+      final r = await Future.wait([
+        http.get(Uri.parse(_districtUrl)),
+        http.get(Uri.parse(_upazilaUrl)),
+      ]);
+      if (r.any((e) => e.statusCode != 200)) {
+        throw Exception();
+      }
+      _districts = jsonDecode(r[0].body);
+      _upazilas = jsonDecode(r[1].body);
+    } catch (_) {
+      _message = isBn
+          ? 'তালিকা আনতে সমস্যা হয়েছে। ইন্টারনেট পরীক্ষা করুন।'
+          : 'Could not load the lists. Check internet.';
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  String _localName(dynamic item) {
+    final n = item['name'];
+    if (n is Map) {
+      return (isBn ? n['local'] ?? n['en'] : n['en'] ?? n['local'])
+          .toString();
+    }
+    return '';
+  }
+
+  List<dynamic> get _filteredUpazilas => _upazilas.where((u) {
+    return u['parent']?['id'] == _districtId;
+  }).toList();
+
+  Future<void> _saveLocation({
+    required String mode,
+    required String label,
+    double? latitude,
+    double? longitude,
+    String? countryCode,
+    String? countryName,
+    String? districtId,
+    String? upazilaId,
+  }) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('location_mode', mode);
+    await p.setString('location_label', label);
+
+    if (latitude != null && longitude != null) {
+      await p.setDouble('location_lat', latitude);
+      await p.setDouble('location_lon', longitude);
+    } else {
+      await p.remove('location_lat');
+      await p.remove('location_lon');
+    }
+
+    if (countryCode != null) {
+      await p.setString('location_country_code', countryCode);
+      await p.setString('location_country_name', countryName ?? '');
+    }
+    if (districtId != null) {
+      await p.setString('location_district_id', districtId);
+      await p.setString('location_upazila_id', upazilaId ?? '');
+    }
+
+    widget.onLocationChanged();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(isBn ? 'অবস্থান সংরক্ষিত হয়েছে' : 'Location saved')),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _useGps() async {
+    setState(() {
+      _loading = true;
+      _message = '';
+    });
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw Exception('GPS বন্ধ রয়েছে।');
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('লোকেশন অনুমতি পাওয়া যায়নি।');
+      }
+      final pos = await Geolocator.getCurrentPosition();
+      await _saveLocation(
+        mode: 'gps',
+        label: 'GPS',
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _message = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  Future<void> _selectCountry() async {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: false,
+      onSelect: (country) async {
+        setState(() {
+          _countryCode = country.countryCode;
+          _countryName = country.name;
+          _districtId = null;
+          _upazilaId = null;
+        });
+        if (country.countryCode == 'BD') {
+          await _loadAdministrativeData();
+        } else {
+          await _saveLocation(
+            mode: 'country',
+            label: country.name,
+            countryCode: country.countryCode,
+            countryName: country.name,
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _saveBangladeshLocation() async {
+    if (_districtId == null || _upazilaId == null) {
+      setState(() => _message = 'জেলা ও উপজেলা নির্বাচন করুন।');
+      return;
+    }
+
+    final u = _upazilas.firstWhere((x) => x['id'] == _upazilaId);
+    final d = _districts.firstWhere((x) => x['id'] == _districtId);
+    final geo = u['geo'];
+
+    if (geo is! Map ||
+        double.tryParse('${geo['lat']}') == null ||
+        double.tryParse('${geo['lon']}') == null) {
+      setState(() => _message = 'অবস্থানের তথ্য পাওয়া যায়নি।');
+      return;
+    }
+
+    await _saveLocation(
+      mode: 'bangladesh',
+      label: '${_localName(d)}, ${_localName(u)}',
+      latitude: double.parse('${geo['lat']}'),
+      longitude: double.parse('${geo['lon']}'),
+      countryCode: 'BD',
+      countryName: 'Bangladesh',
+      districtId: _districtId,
+      upazilaId: _upazilaId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(isBn ? 'নামাজের সময়ের অবস্থান' : 'Prayer Location'),
+        backgroundColor: const Color(0xFF0D5C3A),
+        foregroundColor: Colors.white,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.gps_fixed),
+            title: Text(isBn ? 'বর্তমান অবস্থান (GPS)' : 'Current GPS location'),
+            subtitle: Text(isBn
+                ? 'আপনার প্রকৃত অবস্থান ব্যবহার করুন'
+                : 'Use your actual location'),
+            onTap: _loading ? null : _useGps,
+          ),
+          const Divider(),
+          OutlinedButton.icon(
+            onPressed: _selectCountry,
+            icon: const Icon(Icons.public),
+            label: Text(_countryName ??
+                (isBn ? 'দেশ নির্বাচন করুন' : 'Select country')),
+          ),
+          if (_countryCode == 'BD') ...[
+            const SizedBox(height: 16),
+            if (_loading)
+              const Center(child: CircularProgressIndicator())
+            else if (_districts.isNotEmpty) ...[
+              DropdownButtonFormField<String>(
+                value: _districts.any((d) => d['id'] == _districtId)
+                    ? _districtId
+                    : null,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: isBn ? 'জেলা নির্বাচন করুন' : 'Select district',
+                  border: const OutlineInputBorder(),
+                ),
+                items: _districts.map((d) {
+                  return DropdownMenuItem<String>(
+                    value: d['id'].toString(),
+                    child: Text(_localName(d)),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() {
+                  _districtId = v;
+                  _upazilaId = null;
+                }),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _filteredUpazilas.any((u) => u['id'] == _upazilaId)
+                    ? _upazilaId
+                    : null,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: isBn ? 'উপজেলা নির্বাচন করুন' : 'Select upazila',
+                  border: const OutlineInputBorder(),
+                ),
+                items: _filteredUpazilas.map((u) {
+                  return DropdownMenuItem<String>(
+                    value: u['id'].toString(),
+                    child: Text(_localName(u)),
+                  );
+                }).toList(),
+                onChanged: _districtId == null
+                    ? null
+                    : (v) => setState(() => _upazilaId = v),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _saveBangladeshLocation,
+                child: Text(isBn ? 'অবস্থান সংরক্ষণ করুন' : 'Save location'),
+              ),
+            ],
+          ],
+          if (_countryCode != null && _countryCode != 'BD')
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(isBn
+                  ? 'শুধু দেশের নাম দিয়ে নির্ভুল নামাজের সময় নির্ণয় সম্ভব নয়। GPS ব্যবহার করুন।'
+                  : 'A country name alone cannot determine accurate prayer times. Use GPS.'),
+            ),
+          if (_message.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(_message, style: const TextStyle(color: Colors.red)),
+            ),
+          if (_message.isNotEmpty && !_loading && _countryCode == 'BD')
+            TextButton(
+              onPressed: _loadAdministrativeData,
+              child: Text(isBn ? 'আবার চেষ্টা করুন' : 'Try again'),
+            ),
+          const SizedBox(height: 16),
+          Text(
+            'District and upazila data: Open Admin Data (CC BY 4.0)',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}

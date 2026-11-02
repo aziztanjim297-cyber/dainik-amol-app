@@ -114,6 +114,7 @@ class MainMasterScreen extends StatefulWidget {
 
 class _MainMasterScreenState extends State<MainMasterScreen> {
   int _currentIndex = 0;
+  int _locationVersion = 0;
   final PageController _pageController = PageController();
 
   @override
@@ -126,7 +127,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
   Widget build(BuildContext context) {
     bool isBn = widget.language == 'bn';
     final screens = [
-      HomeScreen(isBn: isBn, madhab: widget.madhab),
+      HomeScreen(key: ValueKey(_locationVersion), isBn: isBn, madhab: widget.madhab),
       AmalListScreen(isBn: isBn, madhab: widget.madhab),
       QuranScreen(isBn: isBn),
       HadithScreen(isBn: isBn),
@@ -138,6 +139,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
         onThemeChanged: widget.onThemeChanged,
         onLanguageChanged: widget.onLanguageChanged,
         onMadhabChanged: widget.onMadhabChanged,
+        onLocationChanged: () => setState(() => _locationVersion++),
       ),
     ];
 
