@@ -1,7 +1,4 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../models/quran_data.dart';
@@ -18,9 +15,7 @@ class QuranScreen extends StatefulWidget {
 class _QuranScreenState extends State<QuranScreen> {
   late PdfViewerController _pdfController;
   int _currentPage = 2;
-  int _pageCount = 610;
-  Uint8List? _filteredPdfBytes;
-  bool _isPdfReady = false;
+  int _pageCount = 611;
   Set<int> _bookmarks = {};
   String _searchQuery = '';
 
@@ -30,65 +25,19 @@ class _QuranScreenState extends State<QuranScreen> {
   void initState() {
     super.initState();
     _pdfController = PdfViewerController();
-    _preparePdf();
     _loadState();
-  }
-
-  Future<void> _preparePdf() async {
-    final data = await rootBundle.load('assets/quran.pdf');
-    final document = PdfDocument(inputBytes: data.buffer.asUint8List());
-
-    if (document.pages.count > 1) {
-      document.pages.removeAt(1);
-    }
-
-    final originalPageCount = document.pages.count;
-    final bytes = await document.save();
-    document.dispose();
-
-    if (!mounted) return;
-
-    setState(() {
-      _filteredPdfBytes = Uint8List.fromList(bytes);
-      _pageCount = originalPageCount;
-      _isPdfReady = true;
-    });
-
-    if (_currentPage >= 1 && _currentPage <= _pageCount) {
-      _pdfController.jumpToPage(_currentPage);
-    }
   }
 
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    var last = prefs.getInt('quran_last_page') ?? 2;
-    final migrated =
-        prefs.getBool('quran_page_numbers_migrated') ?? false;
-
+    final last = prefs.getInt('quran_last_page') ?? 2;
     final bMarks = prefs.getStringList('quran_bmarks') ?? [];
     final oldMarks = prefs.getStringList('quran_bookmarks_list') ?? [];
-
-    final allMarks = <int>{
+    final allMarks = {
       ...bMarks.map((e) => int.tryParse(e)).whereType<int>(),
       ...oldMarks.map((e) => int.tryParse(e)).whereType<int>(),
     };
-
-    if (!migrated) {
-      if (last >= 2) last--;
-
-      final convertedMarks = allMarks
-          .map((p) => p >= 2 ? p - 1 : p)
-          .where((p) => p >= 1 && p <= 610)
-          .toSet();
-
-      allMarks
-        ..clear()
-        ..addAll(convertedMarks);
-
-      await prefs.setInt('quran_last_page', last);
-      await prefs.setBool('quran_page_numbers_migrated', true);
-    }
 
     await prefs.setStringList(
       'quran_bmarks',
@@ -105,7 +54,7 @@ class _QuranScreenState extends State<QuranScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      if (_isPdfReady && _currentPage >= 1 && _currentPage <= _pageCount) {
+      if (_currentPage >= 1 && _currentPage <= _pageCount) {
         _pdfController.jumpToPage(_currentPage);
       }
     });
@@ -354,8 +303,7 @@ class _QuranScreenState extends State<QuranScreen> {
                           ),
                         ),
                         onTap: () {
-                          final page = s['page'] as int;
-                          _jump(page >= 2 ? page - 1 : page);
+                          _jump(s['page']);
                           Navigator.pop(ctx);
                         },
                       );
@@ -434,10 +382,8 @@ class _QuranScreenState extends State<QuranScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: !_isPdfReady || _filteredPdfBytes == null
-                ? const Center(child: CircularProgressIndicator())
-                : SfPdfViewer.memory(
-              _filteredPdfBytes!,
+            child: SfPdfViewer.asset(
+              'assets/quran.pdf',
               controller: _pdfController,
               scrollDirection: PdfScrollDirection.horizontal,
               pageLayoutMode: PdfPageLayoutMode.single,
@@ -446,6 +392,13 @@ class _QuranScreenState extends State<QuranScreen> {
               canShowPaginationDialog: false,
               enableTextSelection: false,
               pageSpacing: 0,
+              onDocumentLoaded: (d) {
+                if (mounted) {
+                  setState(() {
+                    _pageCount = d.document.pages.count;
+                  });
+                }
+              },
               onPageChanged: _onPageChanged,
             ),
           ),

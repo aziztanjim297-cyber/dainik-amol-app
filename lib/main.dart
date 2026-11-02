@@ -114,6 +114,13 @@ class MainMasterScreen extends StatefulWidget {
 
 class _MainMasterScreenState extends State<MainMasterScreen> {
   int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +142,22 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
     ];
 
     return Scaffold(
-      body: screens[_currentIndex],
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (idx) {
+          setState(() => _currentIndex = idx);
+        },
+        children: screens,
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        onDestinationSelected: (idx) {
+          _pageController.animateToPage(
+            idx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        },
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), label: isBn ? 'হোম' : 'Home'),
           NavigationDestination(icon: const Icon(Icons.checklist), label: isBn ? 'আমল' : 'Amal'),
