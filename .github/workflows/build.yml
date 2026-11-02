@@ -75,9 +75,26 @@ jobs:
 
       - name: Inject Android Permissions
         run: |
-          python3 -c "f=open('android/app/src/main/AndroidManifest.xml','r');s=f.read();f.close();p='<uses-permission android:name=\"android.permission.INTERNET\"/>
-<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>\n<uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.VIBRATE\"/>\n<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>\n<uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>\n';s=s.replace('<application',p+'<application');f=open('android/app/src/main/AndroidManifest.xml','w');f.write(s);f.close()"
+          python3 - <<'PYTHON'
+          from pathlib import Path
 
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+
+          permissions = """<uses-permission android:name="android.permission.INTERNET"/>
+          <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+          <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+          <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+          <uses-permission android:name="android.permission.VIBRATE"/>
+          <uses-permission android:name="android.permission.WAKE_LOCK"/>
+          <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+          """
+
+          if "android.permission.INTERNET" not in s:
+              s = s.replace("<application", permissions + "<application", 1)
+
+          p.write_text(s)
+          PYTHON
       - name: Install Dependencies
         run: flutter pub get
 
