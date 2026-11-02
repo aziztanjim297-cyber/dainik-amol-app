@@ -709,7 +709,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(widget.isBn ? 'পরবর্তী নামাজ' : 'Next Prayer', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text(_nextPrayerName, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                      Text(_getPrayerName(_nextPrayerName), style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   Column(
