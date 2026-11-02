@@ -15,6 +15,7 @@ dependencies:
   hijri: ^3.0.0
   http: ^1.2.0
   syncfusion_flutter_pdfviewer: ^29.1.39
+  syncfusion_flutter_pdf: ^29.1.39
   cupertino_icons: ^1.0.6
   geolocator: ^13.0.2
   flutter_local_notifications: ^19.4.0
