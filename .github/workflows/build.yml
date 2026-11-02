@@ -94,14 +94,14 @@ jobs:
               "android.permission.RECEIVE_BOOT_COMPLETED",
           ]
 
-          match = re.search(r"<manifest\\b[^>]*>", s)
+          match = re.search(r"<manifest\b[^>]*>", s)
           if not match:
               raise SystemExit("Manifest opening tag পাওয়া যায়নি")
 
           additions = ""
           for permission in permissions:
               if f'android:name="{permission}"' not in s:
-                  additions += f'\\n    <uses-permission android:name="{permission}"/>'
+                  additions += f'\n    <uses-permission android:name="{permission}"/>'
 
           s = s[:match.end()] + additions + s[match.end():]
           p.write_text(s)
