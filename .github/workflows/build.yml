@@ -80,6 +80,11 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
+      - name: Set App Name and Generate Launcher Icons
+        run: |
+          python3 -c 'from pathlib import Path; import re; p=Path("android/app/src/main/AndroidManifest.xml"); s=p.read_text(); s,n=re.subn(r"android:label=\"[^\"]*\"", "android:label=\"দৈনিক আমল\"", s, count=1); n or exit("App label পাওয়া যায়নি"); p.write_text(s)'
+          dart run flutter_launcher_icons
+
       - name: Build APK (Release)
         run: flutter build apk --release
 
