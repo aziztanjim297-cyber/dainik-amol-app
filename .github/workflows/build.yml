@@ -75,7 +75,8 @@ jobs:
 
       - name: Inject Android Permissions
         run: |
-          python3 -c "f=open('android/app/src/main/AndroidManifest.xml','r');s=f.read();f.close();p='<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>\n<uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.VIBRATE\"/>\n<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>\n<uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>\n';s=s.replace('<application',p+'<application');f=open('android/app/src/main/AndroidManifest.xml','w');f.write(s);f.close()"
+          python3 -c "f=open('android/app/src/main/AndroidManifest.xml','r');s=f.read();f.close();p='<uses-permission android:name=\"android.permission.INTERNET\"/>
+<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>\n<uses-permission android:name=\"android.permission.SCHEDULE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.USE_EXACT_ALARM\"/>\n<uses-permission android:name=\"android.permission.VIBRATE\"/>\n<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>\n<uses-permission android:name=\"android.permission.RECEIVE_BOOT_COMPLETED\"/>\n';s=s.replace('<application',p+'<application');f=open('android/app/src/main/AndroidManifest.xml','w');f.write(s);f.close()"
 
       - name: Install Dependencies
         run: flutter pub get

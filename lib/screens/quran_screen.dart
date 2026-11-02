@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../models/quran_data.dart';
@@ -18,6 +21,15 @@ class _QuranScreenState extends State<QuranScreen> {
   int _pageCount = 611;
   Set<int> _bookmarks = {};
   String _searchQuery = '';
+  String? _pdfPath;
+  bool _isDownloading = false;
+  double _downloadProgress = 0;
+  String? _downloadError;
+  bool _pdfLoaded = false;
+  bool _restoredPage = false;
+
+  static const String _pdfUrl =
+      'https://github.com/aziztanjim297-cyber/dainik-amol-app/releases/download/v1.0.0/quran.pdf';
 
   final List<Map<String, dynamic>> _surahs = QuranData.getSurahs();
 
@@ -26,6 +38,166 @@ class _QuranScreenState extends State<QuranScreen> {
     super.initState();
     _pdfController = PdfViewerController();
     _loadState();
+    _preparePdf();
+  }
+
+
+  Future<void> _preparePdf() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/quran.pdf');
+
+      if (await file.exists() && await file.length() > 1000) {
+        if (mounted) setState(() => _pdfPath = file.path);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _downloadError = 'ফাইল প্রস্তুত করা যায়নি: $e');
+      }
+    }
+  }
+
+  Future<void> _downloadPdf() async {
+    if (_isDownloading) return;
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+      _downloadError = null;
+    });
+
+    final client = http.Client();
+    File? target;
+    IOSink? sink;
+
+    try {
+      final dir = await getApplicationSupportDirectory();
+      target = File('${dir.path}/quran.pdf');
+
+      final response = await client.send(
+        http.Request('GET', Uri.parse(_pdfUrl)),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final total = response.contentLength ?? 0;
+      sink = target.openWrite();
+      var received = 0;
+
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+
+        if (mounted && total > 0) {
+          setState(() => _downloadProgress = received / total);
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+      sink = null;
+
+      if (received < 1000) {
+        throw Exception('ডাউনলোড অসম্পূর্ণ');
+      }
+
+      final header = await target.openRead(0, 5).fold<List<int>>(
+        <int>[],
+        (a, b) => a..addAll(b),
+      );
+
+      if (String.fromCharCodes(header) != '%PDF-') {
+        throw Exception('বৈধ PDF পাওয়া যায়নি');
+      }
+
+      if (mounted) {
+        setState(() {
+          _pdfPath = target!.path;
+          _isDownloading = false;
+          _downloadProgress = 1;
+        });
+      }
+    } catch (e) {
+      if (sink != null) await sink.close();
+      if (target != null && await target.exists()) {
+        await target.delete();
+      }
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _downloadError = 'ডাউনলোড ব্যর্থ: $e';
+        });
+      }
+    } finally {
+      client.close();
+    }
+  }
+
+  Widget _buildDownloadPanel() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.menu_book,
+              size: 64,
+              color: Color(0xFF0D5C3A),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'কুরআন শরীফ পড়তে প্রথমে ডাউনলোড করুন',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'ফাইলের আকার প্রায় ৪২ MB। '
+              'একবার ডাউনলোড হলে অফলাইনে পড়তে পারবেন।',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            if (_isDownloading) ...[
+              LinearProgressIndicator(
+                value: _downloadProgress > 0
+                    ? _downloadProgress
+                    : null,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _downloadProgress > 0
+                    ? '${(_downloadProgress * 100).toStringAsFixed(0)}% ডাউনলোড হয়েছে'
+                    : 'ডাউনলোড হচ্ছে...',
+              ),
+            ] else
+              ElevatedButton.icon(
+                onPressed: _downloadPdf,
+                icon: const Icon(Icons.download),
+                label: const Text('কুরআন শরীফ ডাউনলোড করুন'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D5C3A),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            if (_downloadError != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _downloadError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadState() async {
@@ -51,13 +223,7 @@ class _QuranScreenState extends State<QuranScreen> {
       _bookmarks = allMarks;
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
 
-      if (_currentPage >= 1 && _currentPage <= _pageCount) {
-        _pdfController.jumpToPage(_currentPage);
-      }
-    });
   }
 
   Future<void> _onPageChanged(PdfPageChangedDetails details) async {
@@ -382,8 +548,10 @@ class _QuranScreenState extends State<QuranScreen> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: SfPdfViewer.asset(
-              'assets/quran.pdf',
+            child: _pdfPath == null
+                ? _buildDownloadPanel()
+                : SfPdfViewer.file(
+              File(_pdfPath!),
               controller: _pdfController,
               scrollDirection: PdfScrollDirection.horizontal,
               pageLayoutMode: PdfPageLayoutMode.single,
@@ -392,12 +560,26 @@ class _QuranScreenState extends State<QuranScreen> {
               canShowPaginationDialog: false,
               enableTextSelection: false,
               pageSpacing: 0,
-              onDocumentLoaded: (d) {
-                if (mounted) {
-                  setState(() {
-                    _pageCount = d.document.pages.count;
-                  });
-                }
+              onDocumentLoaded: (d) async {
+                if (!mounted) return;
+
+                final prefs = await SharedPreferences.getInstance();
+                if (!mounted) return;
+
+                final savedPage = prefs.getInt('quran_last_page') ?? 2;
+                final page = savedPage.clamp(1, d.document.pages.count);
+
+                setState(() {
+                  _pageCount = d.document.pages.count;
+                  _pdfLoaded = true;
+                  _restoredPage = true;
+                });
+
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && page > 1) {
+                    _pdfController.jumpToPage(page);
+                  }
+                });
               },
               onPageChanged: _onPageChanged,
             ),
