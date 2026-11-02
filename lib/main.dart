@@ -144,6 +144,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
     return Scaffold(
       body: PageView(
         controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (idx) {
           setState(() => _currentIndex = idx);
         },
