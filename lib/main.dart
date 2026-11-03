@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/notification_service.dart';
@@ -138,9 +140,79 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
   int _currentIndex = 0;
   int _locationVersion = 0;
   final PageController _pageController = PageController();
+  static const MethodChannel _alarmChannel = MethodChannel('dainik_amol/alarm');
+  Timer? _alarmStatusTimer;
+  bool _showingAlarmDialog = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAlarmStatus();
+    _alarmStatusTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _checkAlarmStatus(),
+    );
+  }
+
+  Future<void> _checkAlarmStatus() async {
+    if (!mounted) return;
+    try {
+      final active =
+          await _alarmChannel.invokeMethod<bool>('isAlarmRinging') ?? false;
+      if (!mounted) return;
+
+      if (active && !_showingAlarmDialog) {
+        _showingAlarmDialog = true;
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.alarm_on, color: Colors.deepOrange, size: 28),
+                SizedBox(width: 8),
+                Expanded(child: Text('নামাজের অ্যালার্ম বাজছে!')),
+              ],
+            ),
+            content: const Text(
+              'নামাজের সময় হয়েছে। অ্যালার্ম বন্ধ করতে নিচের বাটনে চাপ দিন।',
+            ),
+            actions: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.stop),
+                label: const Text('অ্যালার্ম বন্ধ করুন'),
+                onPressed: () async {
+                  try {
+                    await _alarmChannel.invokeMethod<void>('stopAlarm');
+                  } catch (e) {
+                    debugPrint('Alarm stop failed: $e');
+                  }
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop();
+                  }
+                },
+              ),
+            ],
+          ),
+        ).whenComplete(() {
+          _showingAlarmDialog = false;
+        });
+      } else if (!active && _showingAlarmDialog) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+        _showingAlarmDialog = false;
+      }
+    } catch (e) {
+      debugPrint('Alarm status check failed: $e');
+    }
+  }
 
   @override
   void dispose() {
+    _alarmStatusTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }

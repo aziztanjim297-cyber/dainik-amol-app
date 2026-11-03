@@ -27,6 +27,22 @@ jobs:
           flutter create --project-name dainik_amol --org com.aziztanjim.dainikamol temp_scaffold
           cp -r temp_scaffold/android ./android
           rm -rf temp_scaffold
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          import re, shutil
+          gradle = Path("android/app/build.gradle.kts").read_text()
+          match = re.search(r'namespace\s*=\s*"([^"]+)"', gradle)
+          if not match:
+              raise SystemExit("Android namespace পাওয়া যায়নি")
+          package = match.group(1)
+          target = Path("android/app/src/main/kotlin") / Path(package.replace(".", "/"))
+          target.mkdir(parents=True, exist_ok=True)
+          for source in Path("android_src").glob("*.kt"):
+              code = source.read_text()
+              code = re.sub(r'^package\s+[^\n]+', 'package ' + package, code, count=1, flags=re.M)
+              (target / source.name).write_text(code)
+          print("Native alarm Kotlin files installed in", package)
+          PYTHON
 
       - name: Configure Android Desugaring and NDK
         run: |
@@ -86,6 +102,8 @@ jobs:
               "android.permission.VIBRATE",
               "android.permission.WAKE_LOCK",
               "android.permission.RECEIVE_BOOT_COMPLETED",
+              "android.permission.FOREGROUND_SERVICE",
+              "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
           ]
 
           match = re.search(r"<manifest\b[^>]*>", s)
@@ -114,6 +132,28 @@ jobs:
                   </intent-filter>
               </receiver>
           """
+
+          native_components = '''
+              <receiver android:name=".AlarmReceiver" android:exported="false" />
+              <receiver android:name=".StopAlarmReceiver" android:exported="false" />
+              <receiver android:name=".BootReceiver" android:enabled="true" android:exported="true">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED" />
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                  </intent-filter>
+              </receiver>
+              <service
+                  android:name=".AlarmRingingService"
+                  android:enabled="true"
+                  android:exported="false"
+                  android:foregroundServiceType="mediaPlayback" />
+          '''
+          if "android:name=\".AlarmRingingService\"" not in s:
+              app_end = s.rfind("</application>")
+              if app_end < 0:
+                  raise SystemExit("Manifest application closing tag পাওয়া যায়নি")
+              s = s[:app_end] + native_components + "\n" + s[app_end:]
 
           if "com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" not in s:
               app_end = s.rfind("</application>")

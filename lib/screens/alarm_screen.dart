@@ -24,7 +24,7 @@ class AlarmScreen extends StatefulWidget {
 }
 
 
-class _AlarmScreenState extends State<AlarmScreen> {
+class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
   Coordinates? _coords;
   DateTime? _getAlarmTime(String id, DateTime date) {
     if (_coords == null) return null;
@@ -41,8 +41,6 @@ class _AlarmScreenState extends State<AlarmScreen> {
         return times.fajr.subtract(const Duration(minutes: 30));
       case 'alarm_fajr':
         return times.fajr;
-      case 'alarm_ishraq':
-        return times.sunrise.add(const Duration(minutes: 15));
       case 'alarm_dhuhr':
         return times.dhuhr;
       case 'alarm_asr':
@@ -69,13 +67,13 @@ class _AlarmScreenState extends State<AlarmScreen> {
   final Map<String, String> _alarmModes = {};
   final Map<String, int> _alarmDelays = {};
   final Map<String, TimeOfDay> _fixedTimes = {};
-  Timer? _alarmVibrateTimer;
   bool _isPlaying = false;
+  bool? _exactAlarmAllowed;
+  static const MethodChannel _nativeAlarmChannel = MethodChannel('dainik_amol/alarm');
 
   final List<Map<String, String>> prayerAlarms = [
     {'id': 'alarm_tahajjud', 'titleBn': 'তাহাজ্জুদ অ্যালার্ম (ফজরের পূর্বে)', 'titleEn': 'Tahajjud Alarm (Before Fajr)'},
     {'id': 'alarm_fajr', 'titleBn': 'ফজরের নামাজ অ্যালার্ম', 'titleEn': 'Fajr Prayer Alarm'},
-    {'id': 'alarm_ishraq', 'titleBn': 'ইশরাক নামাজ অ্যালার্ম', 'titleEn': 'Ishraq Prayer Alarm'},
     {'id': 'alarm_dhuhr', 'titleBn': 'যোহরের নামাজ অ্যালার্ম', 'titleEn': 'Dhuhr Prayer Alarm'},
     {'id': 'alarm_asr', 'titleBn': 'আসরের নামাজ অ্যালার্ম', 'titleEn': 'Asr Prayer Alarm'},
     {'id': 'alarm_maghrib', 'titleBn': 'মাগরিবের নামাজ অ্যালার্ম', 'titleEn': 'Maghrib Prayer Alarm'},
@@ -95,12 +93,32 @@ class _AlarmScreenState extends State<AlarmScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAlarmSettings();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshExactAlarmPermission();
+    }
+  }
+
+  Future<void> _refreshExactAlarmPermission() async {
+    final service = NotificationService.instance;
+    final allowed = await service.canScheduleExactAlarms();
+    if (!mounted) return;
+
+    setState(() => _exactAlarmAllowed = allowed);
+
+    if (allowed) {
+      await _schedulePrayerAlarms();
+    }
+  }
+
+  @override
   void dispose() {
-    _stopAlarm();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -135,10 +153,29 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   Future<void> _schedulePrayerAlarms() async {
-    if (_coords == null) return;
-
     final service = NotificationService.instance;
     await service.initialize();
+
+    final now = DateTime.now();
+
+    // আগের নির্ধারিত ইশরাক অ্যালার্ম সব অবস্থায় বাতিল।
+    for (int day = 0; day < 7; day++) {
+      final date = DateTime(now.year, now.month, now.day + day);
+      final dayNumber = DateTime.utc(
+        date.year,
+        date.month,
+        date.day,
+      ).difference(DateTime.utc(2020, 1, 1)).inDays;
+      await service.cancelPrayerAlarm(dayNumber * 10 + 2);
+    }
+
+    if (_coords == null) return;
+
+    final exactAllowed = await service.canScheduleExactAlarms();
+    if (mounted) {
+      setState(() => _exactAlarmAllowed = exactAllowed);
+    }
+    if (!exactAllowed) return;
 
     final now = DateTime.now();
 
@@ -156,15 +193,23 @@ class _AlarmScreenState extends State<AlarmScreen> {
           date.day,
         ).difference(DateTime.utc(2020, 1, 1)).inDays;
 
-        final notificationId = dayNumber * 10 + index;
+        const alarmSlots = <String, int>{
+          'alarm_tahajjud': 0,
+          'alarm_fajr': 1,
+          'alarm_dhuhr': 3,
+          'alarm_asr': 4,
+          'alarm_maghrib': 5,
+          'alarm_isha': 6,
+        };
+        final notificationId = dayNumber * 10 + alarmSlots[id]!;
 
-        await service.cancelAlarm(notificationId);
+        await service.cancelPrayerAlarm(notificationId);
         if (!enabled) continue;
 
         DateTime? alarmTime;
 
         final supportsCustomMode =
-            id != 'alarm_tahajjud' && id != 'alarm_ishraq';
+            id != 'alarm_tahajjud';
 
         final mode = supportsCustomMode
             ? (_alarmModes[id] ?? 'prayer')
@@ -193,12 +238,10 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
         if (alarmTime == null || !alarmTime.isAfter(now)) continue;
 
-        await service.scheduleAlarm(
+        await service.schedulePrayerAlarm(
           id: notificationId,
           title: item['titleBn']!,
-          body: 'নামাজের অ্যালার্ম • দৈনিক আমল',
           dateTime: alarmTime,
-          payload: id,
         );
       }
     }
@@ -333,64 +376,10 @@ class _AlarmScreenState extends State<AlarmScreen> {
     await _schedulePrayerAlarms();
   }
 
-  // ফোনের আসল সিস্টেম অ্যালার্ট সাউন্ড ও হার্ডওয়্যার ভাইব্রেশন অ্যালার্ম
   void _playSystemAlarm() {
-    setState(() => _isPlaying = true);
-    SystemSound.play(SystemSoundType.alert);
-    HapticFeedback.heavyImpact();
-
-    _alarmVibrateTimer?.cancel();
-    _alarmVibrateTimer = Timer.periodic(const Duration(milliseconds: 700), (timer) {
-      if (!_isPlaying) {
-        timer.cancel();
-      } else {
-        SystemSound.play(SystemSoundType.alert);
-        HapticFeedback.heavyImpact();
-      }
+    _nativeAlarmChannel.invokeMethod<void>('startTestAlarm').catchError((e) {
+      debugPrint('Test alarm start failed: $e');
     });
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.alarm_on, color: Colors.deepOrange, size: 28),
-            const SizedBox(width: 8),
-            Text(widget.isBn ? 'নামাজের অ্যালার্ম বাজছে!' : 'Prayer Alarm Ringing!'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.isBn ? 'حي على الصلاة • নামাজের সময় হয়েছে!' : 'Hayya \'alas-Salah • Time for Prayer!',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A)),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.isBn
-                  ? 'আপনার ফোনের সিস্টেম অ্যালার্ট ও ভাইব্রেশন সফলভাবে সক্রিয় হয়েছে। অ্যালার্ম বন্ধ করতে নিচের বাটনে চাপ দিন।'
-                  : 'Your phone alert tone and vibration are active. Tap below to stop.',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            icon: const Icon(Icons.stop),
-            label: Text(widget.isBn ? 'অ্যালার্ম বন্ধ করুন' : 'Stop Alarm'),
-            onPressed: () {
-              _stopAlarm();
-              Navigator.pop(ctx);
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   void _playSystemNotification() {
@@ -401,8 +390,12 @@ class _AlarmScreenState extends State<AlarmScreen> {
     );
   }
 
-  void _stopAlarm() {
-    _alarmVibrateTimer?.cancel();
+  Future<void> _stopAlarm() async {
+    try {
+      await _nativeAlarmChannel.invokeMethod<void>('stopAlarm');
+    } catch (e) {
+      debugPrint('Alarm stop failed: $e');
+    }
     if (mounted) setState(() => _isPlaying = false);
   }
 
@@ -440,6 +433,28 @@ class _AlarmScreenState extends State<AlarmScreen> {
                         : 'Test system alert sound and hardware vibration for prayers.',
                     style: const TextStyle(fontSize: 12, color: Colors.black87),
                   ),
+                  if (_exactAlarmAllowed == false) ...[
+                    const SizedBox(height: 10),
+                    const Text(
+                      'নির্দিষ্ট সময়ে নামাজের অ্যালার্ম পেতে Exact Alarm অনুমতি চালু করুন।',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await NotificationService.instance
+                              .openExactAlarmSettings();
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Exact Alarm অনুমতি চালু করুন'),
+                      ),
+                    ),
+                  ],
                   const Divider(height: 18),
                   Row(
                     children: [
@@ -496,7 +511,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                       activeColor: const Color(0xFF0D5C3A),
                       onChanged: (val) => _toggleAlarm(id, val),
                     ),
-                    if (isSet && id != 'alarm_tahajjud' && id != 'alarm_ishraq') ...[
+                    if (isSet && id != 'alarm_tahajjud') ...[
                       const Divider(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

@@ -1,5 +1,6 @@
 import 'package:adhan/adhan.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -92,6 +93,48 @@ class NotificationService {
         payload: payload,
       );
     }
+  }
+
+
+  static const MethodChannel _nativeAlarmChannel =
+      MethodChannel('dainik_amol/alarm');
+
+  Future<bool> canScheduleExactAlarms() async {
+    try {
+      return await _nativeAlarmChannel.invokeMethod<bool>(
+            'canScheduleExactAlarms',
+          ) ??
+          false;
+    } on PlatformException catch (e) {
+      debugPrint('Exact alarm permission check failed: $e');
+      return false;
+    }
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    await _nativeAlarmChannel.invokeMethod<void>(
+      'openExactAlarmSettings',
+    );
+  }
+
+  Future<void> schedulePrayerAlarm({
+    required int id,
+    required String title,
+    required DateTime dateTime,
+  }) async {
+    if (!dateTime.isAfter(DateTime.now())) return;
+    await initialize();
+    await _plugin.cancel(id);
+    await _nativeAlarmChannel.invokeMethod<void>('scheduleAlarm', {
+      'id': id,
+      'title': title,
+      'timestamp': dateTime.millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> cancelPrayerAlarm(int id) async {
+    await _plugin.cancel(id);
+    await _nativeAlarmChannel.invokeMethod<void>('cancelAlarm', {'id': id});
   }
 
   int _amalNotificationId(int amalIndex, int dayOffset, int index) {
@@ -280,7 +323,18 @@ class NotificationService {
           amalIndex++) {
         final amal = amals[amalIndex];
 
-        if (amal.isFard ||
+        const prayerAmalsWithoutReminders = <String>{
+          'fajr_sunnah',
+          'dhuhr_sunnah_pre',
+          'dhuhr_sunnah_post',
+          'maghrib_sunnah',
+          'awwabin',
+          'isha_sunnah',
+          'isha_witr',
+        };
+
+        if (prayerAmalsWithoutReminders.contains(amal.id) ||
+            amal.isFard ||
             (prefs.getBool('enabled_${amal.id}') ?? true) == false ||
             (prefs.getBool('${_dateKey(date)}_${amal.id}') ?? false)) {
           continue;
