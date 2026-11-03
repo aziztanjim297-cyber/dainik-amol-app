@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
 import '../models/helpers.dart';
+import '../services/notification_service.dart';
 
 class AmalListScreen extends StatefulWidget {
   final bool isBn;
@@ -69,10 +70,24 @@ class _AmalListScreenState extends State<AmalListScreen> {
     }
   }
 
+  Future<void> _refreshAmalReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble('location_lat');
+    final lon = prefs.getDouble('location_lon');
+    if (lat == null || lon == null) return;
+
+    await NotificationService.instance.scheduleAmalReminders(
+      coords: Coordinates(lat, lon),
+      madhab: widget.madhab,
+    );
+  }
+
   Future<void> _toggleAmol(String id) async {
     if (amolStatus[id] == true) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('${todayKey}_$id', true);
+    await NotificationService.instance.cancelAmalReminders(id);
+    if (!mounted) return;
     setState(() => amolStatus[id] = true);
   }
 
@@ -149,6 +164,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
                                 await AmalService.addCustomAmal(title, _selectedPrayerCategory, widget.isBn ? 'কাস্টম আমল' : 'Custom');
                                 _customTitleController.clear();
                                 await _loadAmolData();
+                                await _refreshAmalReminders();
                                 setModalState(() {});
                                 setState(() {});
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isBn ? 'নতুন আমল সফলভাবে যুক্ত হয়েছে!' : 'New amal added!')));
@@ -184,7 +200,9 @@ class _AmalListScreenState extends State<AmalListScreen> {
                               IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                                 onPressed: () async {
+                                  await NotificationService.instance.cancelAmalReminders(a.id, allDays: true);
                                   await AmalService.deleteCustomAmal(a.id);
+                                  await _refreshAmalReminders();
                                   await _loadAmolData();
                                   setModalState(() {});
                                   setState(() {});
@@ -196,6 +214,11 @@ class _AmalListScreenState extends State<AmalListScreen> {
                               onChanged: a.isFard ? null : (val) async {
                                 final prefs = await SharedPreferences.getInstance();
                                 await prefs.setBool('enabled_${a.id}', val);
+                                if (!val) {
+                                  await NotificationService.instance.cancelAmalReminders(a.id, allDays: true);
+                                } else {
+                                  await _refreshAmalReminders();
+                                }
                                 setModalState(() => enabledAmols[a.id] = val);
                                 setState(() => enabledAmols[a.id] = val);
                               },

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/helpers.dart';
+import '../services/notification_service.dart';
 import '../models/history_service.dart';
 import 'alarm_screen.dart';
 import 'summary_screen.dart';
@@ -71,6 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _locationMessage = prefs.getString('location_label') ?? '';
       _loadingLocation = false;
       _initTimes();
+      if (_coords != null) {
+        await NotificationService.instance.scheduleAmalReminders(
+          coords: _coords!,
+          madhab: widget.madhab,
+        );
+      }
       if (mounted) setState(() {});
       return;
     }
@@ -106,6 +113,12 @@ class _HomeScreenState extends State<HomeScreen> {
       await prefs.setString('location_label', _locationMessage);
       _loadingLocation = false;
       _initTimes();
+      if (_coords != null) {
+        await NotificationService.instance.scheduleAmalReminders(
+          coords: _coords!,
+          madhab: widget.madhab,
+        );
+      }
       if (mounted) setState(() {});
     } catch (_) {
       _setLocationFallback(
@@ -192,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('${_activeDateKey}_$id', true);
+    await NotificationService.instance.cancelAmalReminders(id);
 
     if (!mounted) return;
 
@@ -227,6 +241,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _activeDateKey = newDate;
       _initTimes();
       await _loadAllData();
+      if (_coords != null) {
+        await NotificationService.instance.scheduleAmalReminders(
+          coords: _coords!,
+          madhab: widget.madhab,
+        );
+      }
     } catch (e) {
       debugPrint('Date change error: $e');
     } finally {

@@ -25,12 +25,13 @@ class AlarmScreen extends StatefulWidget {
 
 
 class _AlarmScreenState extends State<AlarmScreen> {
+  Coordinates? _coords;
   DateTime? _getAlarmTime(String id, DateTime date) {
-    if (widget.coords == null) return null;
+    if (_coords == null) return null;
 
     final params = _getParams();
     final times = PrayerTimes(
-      widget.coords!,
+      _coords!,
       DateComponents.from(date),
       params,
     );
@@ -105,6 +106,14 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
   Future<void> _loadAlarmSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    _coords = widget.coords;
+    if (_coords == null) {
+      final lat = prefs.getDouble('location_lat');
+      final lon = prefs.getDouble('location_lon');
+      if (lat != null && lon != null) {
+        _coords = Coordinates(lat, lon);
+      }
+    }
     setState(() {
       for (var a in prayerAlarms) {
         final id = a['id']!;
@@ -126,7 +135,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
   }
 
   Future<void> _schedulePrayerAlarms() async {
-    if (widget.coords == null) return;
+    if (_coords == null) return;
 
     final service = NotificationService.instance;
     await service.initialize();
@@ -142,25 +151,39 @@ class _AlarmScreenState extends State<AlarmScreen> {
         final enabled = _alarms[id] ?? true;
 
         final dayNumber = DateTime.utc(
-          date.year, date.month, date.day,
+          date.year,
+          date.month,
+          date.day,
         ).difference(DateTime.utc(2020, 1, 1)).inDays;
+
         final notificationId = dayNumber * 10 + index;
 
         await service.cancelAlarm(notificationId);
         if (!enabled) continue;
 
         DateTime? alarmTime;
-        final mode = _alarmModes[id] ?? 'prayer';
+
+        final supportsCustomMode =
+            id != 'alarm_tahajjud' && id != 'alarm_ishraq';
+
+        final mode = supportsCustomMode
+            ? (_alarmModes[id] ?? 'prayer')
+            : 'prayer';
 
         if (mode == 'fixed') {
           final fixed = _fixedTimes[id] ??
               const TimeOfDay(hour: 7, minute: 30);
+
           alarmTime = DateTime(
-            date.year, date.month, date.day,
-            fixed.hour, fixed.minute,
+            date.year,
+            date.month,
+            date.day,
+            fixed.hour,
+            fixed.minute,
           );
         } else {
           alarmTime = _getAlarmTime(id, date);
+
           if (alarmTime != null && mode == 'delay') {
             alarmTime = alarmTime.add(
               Duration(minutes: _alarmDelays[id] ?? 15),
@@ -224,7 +247,30 @@ class _AlarmScreenState extends State<AlarmScreen> {
   Future<void> _toggleNotification(String id, bool val) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(id, val);
-    setState(() => _notifications[id] = val);
+
+    const amalIds = <String, String>{
+      'notif_yasin': 'surah_yasin',
+      'notif_morning_dhikr': 'morning_adhkar',
+      'notif_quran': 'quran_2_pages',
+      'notif_evening_dhikr': 'evening_dhikr',
+      'notif_waqiah': 'surah_waqiah',
+      'notif_mulk': 'surah_mulk',
+      'notif_muhasaba': 'muhasabah',
+    };
+
+    final amalId = amalIds[id];
+    if (amalId != null) {
+      if (!val) {
+        await NotificationService.instance.cancelAmalReminders(amalId, allDays: true);
+      } else if (_coords != null) {
+        await NotificationService.instance.scheduleAmalReminders(
+          coords: _coords!,
+          madhab: widget.madhab,
+        );
+      }
+    }
+
+    if (mounted) setState(() => _notifications[id] = val);
   }
 
   Future<void> _changeAlarmMode(String id, String mode) async {
@@ -450,7 +496,7 @@ class _AlarmScreenState extends State<AlarmScreen> {
                       activeColor: const Color(0xFF0D5C3A),
                       onChanged: (val) => _toggleAlarm(id, val),
                     ),
-                    if (isSet) ...[
+                    if (isSet && id != 'alarm_tahajjud' && id != 'alarm_ishraq') ...[
                       const Divider(height: 8),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

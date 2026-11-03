@@ -1,7 +1,9 @@
+import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/notification_service.dart';
+import 'services/background_task_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/amal_screen.dart';
 import 'screens/quran_screen.dart';
@@ -13,6 +15,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('bn', null);
   await NotificationService.instance.initialize();
+  try {
+    await initializeBackgroundReminderRefresh();
+  } catch (e) {
+    debugPrint('Background reminder initialization failed: $e');
+  }
   runApp(const DainikAmolApp());
 }
 
@@ -56,10 +63,21 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
     await prefs.setString('app_lang', lang);
   }
 
-  void _updateMadhab(String m) async {
+  Future<void> _updateMadhab(String m) async {
     setState(() => _madhab = m);
+
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString('madhab', m);
+    await prefs.setString('madhab', m);
+
+    final lat = prefs.getDouble('location_lat');
+    final lon = prefs.getDouble('location_lon');
+
+    if (lat != null && lon != null) {
+      await NotificationService.instance.scheduleAmalReminders(
+        coords: Coordinates(lat, lon),
+        madhab: m,
+      );
+    }
   }
 
   @override

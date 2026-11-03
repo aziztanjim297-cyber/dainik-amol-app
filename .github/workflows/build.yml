@@ -68,11 +68,6 @@ jobs:
           PYTHON
 
 
-      - name: Configure Kotlin Version
-        run: |
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.22"/' android/build.gradle || true
-          sed -i 's/org.jetbrains.kotlin.android" version "[^"]*"/org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle || true
-
       - name: Inject Android Permissions
         run: |
           python3 - <<'PYTHON'
@@ -88,7 +83,6 @@ jobs:
               "android.permission.ACCESS_COARSE_LOCATION",
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.SCHEDULE_EXACT_ALARM",
-              "android.permission.USE_EXACT_ALARM",
               "android.permission.VIBRATE",
               "android.permission.WAKE_LOCK",
               "android.permission.RECEIVE_BOOT_COMPLETED",
@@ -104,8 +98,31 @@ jobs:
                   additions += f'\n    <uses-permission android:name="{permission}"/>'
 
           s = s[:match.end()] + additions + s[match.end():]
+
+          receivers = """
+              <receiver
+                  android:exported="false"
+                  android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+              <receiver
+                  android:exported="false"
+                  android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                      <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                      <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+                  </intent-filter>
+              </receiver>
+          """
+
+          if "com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" not in s:
+              app_end = s.rfind("</application>")
+              if app_end < 0:
+                  raise SystemExit("Manifest application closing tag পাওয়া যায়নি")
+              s = s[:app_end] + receivers + "\n" + s[app_end:]
+
           p.write_text(s)
-          print("Android permissions configured successfully")
+          print("Android permissions ও notification receivers configured successfully")
           PYTHON
       - name: Install Dependencies
         run: flutter pub get

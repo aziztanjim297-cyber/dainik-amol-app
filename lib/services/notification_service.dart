@@ -1,6 +1,11 @@
+import 'package:adhan/adhan.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
+
+import '../models/helpers.dart';
 
 class NotificationService {
   NotificationService._();
@@ -12,7 +17,10 @@ class NotificationService {
 
   bool _initialized = false;
 
-  Future<void> initialize() async {
+  static const int _amalIdStart = 1000000;
+  static const int _amalIdEnd = 9000000;
+
+  Future<void> initialize({bool requestPermissions = true}) async {
     if (_initialized) return;
 
     tz_data.initializeTimeZones();
@@ -21,17 +29,16 @@ class NotificationService {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const settings = InitializationSettings(
-      android: androidSettings,
-    );
-
+    const settings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(settings);
 
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
 
-    await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
+    if (requestPermissions) {
+      await android?.requestNotificationsPermission();
+      await android?.requestExactAlarmsPermission();
+    }
 
     _initialized = true;
   }
@@ -62,15 +69,280 @@ class NotificationService {
       ),
     );
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      scheduledTime,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: payload,
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+    } on PlatformException {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: payload,
+      );
+    }
+  }
+
+  int _amalNotificationId(int amalIndex, int dayOffset, int index) {
+    return _amalIdStart +
+        (dayOffset * 4000000) +
+        (amalIndex * 100) +
+        index;
+  }
+
+  Future<void> cancelAmalReminders(
+    String amalId, {
+    bool allDays = false,
+  }) async {
+    await initialize();
+
+    final pending = await _plugin.pendingNotificationRequests();
+    final payloadPrefix = 'amal:$amalId:';
+    final todayPayload = '$payloadPrefix${_dateKey(DateTime.now())}';
+
+    for (final request in pending) {
+      if (allDays
+          ? (request.payload?.startsWith(payloadPrefix) ?? false)
+          : request.payload == todayPayload) {
+        await _plugin.cancel(request.id);
+      }
+    }
+  }
+
+  Future<void> _cancelAllAmalReminders() async {
+    final pending = await _plugin.pendingNotificationRequests();
+
+    for (final request in pending) {
+      if (request.id >= _amalIdStart &&
+          request.id < _amalIdEnd) {
+        await _plugin.cancel(request.id);
+      }
+    }
+  }
+
+  String _dateKey(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  String? _notificationSettingKey(String amalId) {
+    const keys = <String, String>{
+      'surah_yasin': 'notif_yasin',
+      'morning_adhkar': 'notif_morning_dhikr',
+      'quran_2_pages': 'notif_quran',
+      'evening_dhikr': 'notif_evening_dhikr',
+      'surah_waqiah': 'notif_waqiah',
+      'surah_mulk': 'notif_mulk',
+      'muhasabah': 'notif_muhasaba',
+    };
+
+    return keys[amalId];
+  }
+
+  DateTime _at(DateTime date, int hour, int minute) {
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  ({DateTime start, DateTime end})? _reminderWindow(
+    AmalItem amal,
+    DateTime date,
+    PrayerTimes times,
+    PrayerTimes tomorrowTimes,
+  ) {
+    switch (amal.id) {
+      case 'surah_yasin':
+      case 'morning_adhkar':
+        return (start: times.fajr, end: _at(date, 9, 0));
+
+      case 'quran_2_pages':
+        return (
+          start: times.sunrise.add(const Duration(minutes: 15)),
+          end: _at(date, 11, 0),
+        );
+
+      case 'evening_dhikr':
+        return (start: times.asr, end: times.maghrib);
+
+      case 'surah_waqiah':
+        return (start: times.maghrib, end: times.isha);
+
+      case 'surah_mulk':
+        return (start: _at(date, 20, 0), end: tomorrowTimes.fajr);
+
+      case 'muhasabah':
+        return (
+          start: _at(date, 21, 30),
+          end: _at(date.add(const Duration(days: 1)), 2, 0),
+        );
+    }
+
+    switch (amal.prayerName) {
+      case 'tahajjud':
+        return (
+          start: times.fajr.subtract(const Duration(minutes: 90)),
+          end: times.fajr.subtract(const Duration(minutes: 10)),
+        );
+
+      case 'fajr':
+        return (start: times.fajr, end: times.sunrise);
+
+      case 'post_fajr':
+        return (start: times.fajr, end: _at(date, 9, 0));
+
+      case 'ishraq':
+        return (
+          start: times.sunrise.add(const Duration(minutes: 15)),
+          end: _at(date, 11, 0),
+        );
+
+      case 'dhuhr':
+        return (start: times.dhuhr, end: times.asr);
+
+      case 'asr':
+        return (start: times.asr, end: times.maghrib);
+
+      case 'maghrib':
+        return (start: times.maghrib, end: times.isha);
+
+      case 'isha':
+        return (start: times.isha, end: _at(date, 23, 59));
+
+      case 'bedtime':
+        return (start: _at(date, 20, 0), end: tomorrowTimes.fajr);
+
+      case 'muhasabah':
+        return (
+          start: _at(date, 21, 30),
+          end: _at(date.add(const Duration(days: 1)), 2, 0),
+        );
+
+      default:
+        return null;
+    }
+  }
+
+  Future<void> scheduleAmalReminders({
+    required Coordinates coords,
+    required String madhab,
+  }) async {
+    await initialize();
+
+    final prefs = await SharedPreferences.getInstance();
+    final amals = await AmalService.getAllAmals();
+
+    await _cancelAllAmalReminders();
+
+    final params = CalculationMethod.karachi.getParameters();
+    params.madhab =
+        madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
+
+    final now = DateTime.now();
+
+    final reminders = <
+        ({DateTime dateTime, int id, String title, String payload})
+    >[];
+
+    for (var dayOffset = 0; dayOffset < 2; dayOffset++) {
+      final date = DateTime(
+        now.year,
+        now.month,
+        now.day + dayOffset,
+      );
+
+      final tomorrow = date.add(const Duration(days: 1));
+
+      final times = PrayerTimes(
+        coords,
+        DateComponents.from(date),
+        params,
+      );
+
+      final tomorrowTimes = PrayerTimes(
+        coords,
+        DateComponents.from(tomorrow),
+        params,
+      );
+
+      for (var amalIndex = 0;
+          amalIndex < amals.length;
+          amalIndex++) {
+        final amal = amals[amalIndex];
+
+        if (amal.isFard ||
+            (prefs.getBool('enabled_${amal.id}') ?? true) == false ||
+            (prefs.getBool('${_dateKey(date)}_${amal.id}') ?? false)) {
+          continue;
+        }
+
+        final settingKey = _notificationSettingKey(amal.id);
+
+        if (settingKey != null &&
+            (prefs.getBool(settingKey) ?? true) == false) {
+          continue;
+        }
+
+        final window = _reminderWindow(
+          amal,
+          date,
+          times,
+          tomorrowTimes,
+        );
+
+        if (window == null ||
+            !window.end.isAfter(window.start)) {
+          continue;
+        }
+
+        var reminderTime = window.start;
+        var index = 0;
+
+        while (reminderTime.isBefore(window.end) && index < 100) {
+          if (reminderTime.isAfter(now)) {
+            reminders.add((
+              dateTime: reminderTime,
+              id: _amalNotificationId(
+                amalIndex,
+                dayOffset,
+                index,
+              ),
+              title: amal.titleBn,
+              payload: 'amal:${amal.id}:${_dateKey(date)}',
+            ));
+          }
+
+          reminderTime =
+              reminderTime.add(const Duration(minutes: 10));
+          index++;
+        }
+      }
+    }
+
+    reminders.sort(
+      (a, b) => a.dateTime.compareTo(b.dateTime),
     );
+
+    const maxScheduledAmalReminders = 400;
+
+    for (final reminder
+        in reminders.take(maxScheduledAmalReminders)) {
+      await scheduleAlarm(
+        id: reminder.id,
+        title: reminder.title,
+        body: 'এখন আমলটি সম্পন্ন করার সময়। আমল শেষ হলে তালিকায় টিক দিন।',
+        dateTime: reminder.dateTime,
+        payload: reminder.payload,
+      );
+    }
   }
 
   Future<void> cancelAlarm(int id) async {
