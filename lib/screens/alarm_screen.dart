@@ -177,7 +177,6 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
     }
     if (!exactAllowed) return;
 
-    final now = DateTime.now();
 
     for (int day = 0; day < 7; day++) {
       final date = DateTime(now.year, now.month, now.day + day);
