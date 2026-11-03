@@ -261,6 +261,7 @@ class HistoryService {
     int totalAmols = 0;
     int completedAmols = 0;
     int totalZikr = 0;
+    final zikrCounts = <String, int>{};
 
     for (int i = 0; i < days; i++) {
       final date = DateFormat('yyyy-MM-dd').format(
@@ -277,8 +278,10 @@ class HistoryService {
         totalAmols += record.totalAmols;
         completedAmols += record.completedAmols;
 
-        for (final count in record.zikrCounts.values) {
-          totalZikr += count;
+        for (final entry in record.zikrCounts.entries) {
+          zikrCounts[entry.key] =
+              (zikrCounts[entry.key] ?? 0) + entry.value;
+          totalZikr += entry.value;
         }
       }
     }
@@ -292,6 +295,7 @@ class HistoryService {
       'completedAmols': completedAmols,
       'percent': percent,
       'totalZikr': totalZikr,
+      'zikrCounts': zikrCounts,
     };
   }
 }

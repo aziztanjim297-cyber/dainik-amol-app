@@ -210,10 +210,13 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               '${widget.isBn ? "তারিখ" : "Date"}: ${DateFormat('d MMMM yyyy').format(_selectedDate)}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
-              icon: const Icon(Icons.calendar_month, size: 16),
-              label: Text(widget.isBn ? 'তারিখ বাছুন' : 'Pick Date'),
+            IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C3A),
+                foregroundColor: Colors.white,
+              ),
+              tooltip: widget.isBn ? 'তারিখ নির্বাচন' : 'Select date',
+              icon: const Icon(Icons.calendar_month, size: 20),
               onPressed: () async {
                 DateTime? picked = await showDatePicker(
                   context: context,
@@ -322,6 +325,9 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
     int done = stats['completedAmols'] ?? 0;
     int percent = stats['percent'] ?? 0;
     int totalZikr = stats['totalZikr'] ?? 0;
+    final zikrCounts = Map<String, int>.from(
+      stats['zikrCounts'] ?? {},
+    );
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -384,6 +390,43 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
+                  const Divider(height: 24),
+                  Text(
+                    widget.isBn ? 'জিকিরভিত্তিক হিসাব' : 'Zikr Breakdown',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFF0D5C3A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (zikrCounts.isEmpty)
+                    Text(
+                      widget.isBn
+                          ? 'এ সময়ে কোনো জিকিরের হিসাব নেই'
+                          : 'No zikr recorded for this period',
+                      style: TextStyle(color: Colors.grey[600]),
+                    )
+                  else
+                    ...zikrCounts.entries.map(
+                      (entry) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        leading: const Icon(
+                          Icons.circle,
+                          size: 9,
+                          color: Color(0xFF0D5C3A),
+                        ),
+                        title: Text(entry.key.split('—')[0].trim()),
+                        trailing: Text(
+                          '${entry.value} ${widget.isBn ? 'বার' : 'times'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D5C3A),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
