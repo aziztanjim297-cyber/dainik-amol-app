@@ -16,6 +16,7 @@ class QuranScreen extends StatefulWidget {
 }
 
 class _QuranScreenState extends State<QuranScreen> {
+  String _t(String bn, String en) => widget.isBn ? bn : en;
   late PdfViewerController _pdfController;
   int _currentPage = 2;
   int _pageCount = 611;
@@ -52,7 +53,7 @@ class _QuranScreenState extends State<QuranScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _downloadError = 'ফাইল প্রস্তুত করা যায়নি: $e');
+        setState(() => _downloadError = _t('ফাইল প্রস্তুত করা যায়নি: $e', 'Could not prepare file: $e'));
       }
     }
   }
@@ -100,7 +101,7 @@ class _QuranScreenState extends State<QuranScreen> {
       sink = null;
 
       if (received < 1000) {
-        throw Exception('ডাউনলোড অসম্পূর্ণ');
+        throw Exception(_t('ডাউনলোড অসম্পূর্ণ', 'Download incomplete'));
       }
 
       final header = await target.openRead(0, 5).fold<List<int>>(
@@ -109,7 +110,7 @@ class _QuranScreenState extends State<QuranScreen> {
       );
 
       if (String.fromCharCodes(header) != '%PDF-') {
-        throw Exception('বৈধ PDF পাওয়া যায়নি');
+        throw Exception(_t('বৈধ PDF পাওয়া যায়নি', 'Invalid PDF file'));
       }
 
       if (mounted) {
@@ -128,7 +129,7 @@ class _QuranScreenState extends State<QuranScreen> {
       if (mounted) {
         setState(() {
           _isDownloading = false;
-          _downloadError = 'ডাউনলোড ব্যর্থ: $e';
+          _downloadError = _t('ডাউনলোড ব্যর্থ: $e', 'Download failed: $e');
         });
       }
     } finally {
@@ -149,8 +150,8 @@ class _QuranScreenState extends State<QuranScreen> {
               color: Color(0xFF0D5C3A),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'কুরআন শরীফ পড়তে প্রথমে ডাউনলোড করুন',
+            Text(
+              _t('কুরআন শরীফ পড়তে প্রথমে ডাউনলোড করুন', 'Download the Quran to start reading'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -158,9 +159,7 @@ class _QuranScreenState extends State<QuranScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'ফাইলের আকার প্রায় ৪২ MB। '
-              'একবার ডাউনলোড হলে অফলাইনে পড়তে পারবেন।',
+            Text(_t('ফাইলের আকার প্রায় ৪২ MB। একবার ডাউনলোড হলে অফলাইনে পড়তে পারবেন।', 'File size is about 42 MB. Once downloaded, you can read it offline.'),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -173,14 +172,14 @@ class _QuranScreenState extends State<QuranScreen> {
               const SizedBox(height: 8),
               Text(
                 _downloadProgress > 0
-                    ? '${(_downloadProgress * 100).toStringAsFixed(0)}% ডাউনলোড হয়েছে'
-                    : 'ডাউনলোড হচ্ছে...',
+                    ? '${(_downloadProgress * 100).toStringAsFixed(0)}% ${_t('ডাউনলোড হয়েছে', 'downloaded')}'
+                    : _t('ডাউনলোড হচ্ছে...', 'Downloading...'),
               ),
             ] else
               ElevatedButton.icon(
                 onPressed: _downloadPdf,
                 icon: const Icon(Icons.download),
-                label: const Text('কুরআন শরীফ ডাউনলোড করুন'),
+                label: Text(_t('কুরআন শরীফ ডাউনলোড করুন', 'Download Quran')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0D5C3A),
                   foregroundColor: Colors.white,
@@ -276,8 +275,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'সংরক্ষিত বুকমার্কসমূহ',
+                    Text(_t('সংরক্ষিত বুকমার্কসমূহ', 'Saved Bookmarks'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -292,8 +290,8 @@ class _QuranScreenState extends State<QuranScreen> {
                 ),
                 const Divider(),
                 if (pages.isEmpty)
-                  const Expanded(
-                    child: Center(child: Text('কোনো পৃষ্ঠা বুকমার্ক করা নেই')),
+                  Expanded(
+                    child: Center(child: Text(_t('কোনো পৃষ্ঠা বুকমার্ক করা নেই', 'No bookmarked pages'))),
                   )
                 else
                   Expanded(
@@ -307,7 +305,7 @@ class _QuranScreenState extends State<QuranScreen> {
                             color: Color(0xFF0D5C3A),
                           ),
                           title: Text(
-                            'পৃষ্ঠা নম্বর $page',
+                            _t('পৃষ্ঠা নম্বর $page', 'Page $page'),
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           trailing: IconButton(
@@ -352,19 +350,19 @@ class _QuranScreenState extends State<QuranScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('পৃষ্ঠা নম্বরে যান'),
+        title: Text(_t('পৃষ্ঠা নম্বরে যান', 'Go to Page')),
         content: TextField(
           controller: c,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            hintText: 'পৃষ্ঠা নম্বর লিখুন',
+          decoration: InputDecoration(
+            hintText: _t('পৃষ্ঠা নম্বর লিখুন', 'Enter page number'),
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('বাতিল'),
+            child: Text(_t('বাতিল', 'Cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -376,7 +374,7 @@ class _QuranScreenState extends State<QuranScreen> {
               if (p != null) _jump(p);
               Navigator.pop(ctx);
             },
-            child: const Text('যান'),
+            child: Text(_t('যান', 'Go')),
           ),
         ],
       ),
@@ -393,7 +391,8 @@ class _QuranScreenState extends State<QuranScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final list = _surahs.where((s) {
-            return s['name'].toString().contains(_searchQuery) ||
+            return (widget.isBn ? s['name'] : s['nameEn'])
+                    .toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
                 s['no'].toString() == _searchQuery;
           }).toList();
 
@@ -405,8 +404,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '১১৪টি সূরার সূচিপত্র',
+                    Text(_t('১১৪টি সূরার সূচিপত্র', '114 Surah Index'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -424,7 +422,7 @@ class _QuranScreenState extends State<QuranScreen> {
                     setModalState(() => _searchQuery = val);
                   },
                   decoration: InputDecoration(
-                    hintText: 'সূরার নাম দিয়ে খুঁজুন...',
+                    hintText: _t('সূরার নাম দিয়ে খুঁজুন...', 'Search Surah name...'),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -456,13 +454,13 @@ class _QuranScreenState extends State<QuranScreen> {
                           ),
                         ),
                         title: Text(
-                          '${s['name']}',
+                          widget.isBn ? '${s['name']}' : '${s['nameEn']}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         trailing: Text(
-                          'পৃষ্ঠা ${s['page']}',
+                          _t('পৃষ্ঠা ${s['page']}', 'Page ${s['page']}'),
                           style: const TextStyle(
                             color: Colors.green,
                             fontWeight: FontWeight.bold,
@@ -491,8 +489,8 @@ class _QuranScreenState extends State<QuranScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'পবিত্র কুরআন',
+        title: Text(
+          _t('পবিত্র কুরআন', 'The Holy Quran'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF0D5C3A),
@@ -500,17 +498,17 @@ class _QuranScreenState extends State<QuranScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.list_alt),
-            tooltip: 'সূচিপত্র',
+            tooltip: _t('সূচিপত্র', 'Surah Index'),
             onPressed: _showIndexSheet,
           ),
           IconButton(
             icon: const Icon(Icons.pin_invoke),
-            tooltip: 'পৃষ্ঠায় যান',
+            tooltip: _t('পৃষ্ঠায় যান', 'Go to Page'),
             onPressed: _showJumpDialog,
           ),
           IconButton(
             icon: const Icon(Icons.bookmarks),
-            tooltip: 'বুকমার্ক তালিকা',
+            tooltip: _t('বুকমার্ক তালিকা', 'Bookmarks'),
             onPressed: _showBookmarksSheet,
           ),
           IconButton(
@@ -518,7 +516,7 @@ class _QuranScreenState extends State<QuranScreen> {
               isBookmarked ? Icons.bookmark : Icons.bookmark_border,
               color: isBookmarked ? Colors.amberAccent : Colors.white,
             ),
-            tooltip: 'বুকমার্ক',
+            tooltip: _t('বুকমার্ক', 'Bookmark'),
             onPressed: _toggleBookmark,
           ),
         ],
@@ -537,7 +535,7 @@ class _QuranScreenState extends State<QuranScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'পৃষ্ঠা: $_currentPage / $_pageCount',
+                  _t('পৃষ্ঠা: $_currentPage / $_pageCount', 'Page: $_currentPage / $_pageCount'),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -598,7 +596,7 @@ class _QuranScreenState extends State<QuranScreen> {
                       ? () => _jump(_currentPage - 1)
                       : null,
                   icon: const Icon(Icons.arrow_back_ios, size: 14),
-                  label: const Text('আগের পৃষ্ঠা'),
+                  label: Text(_t('আগের পৃষ্ঠা', 'Previous Page')),
                 ),
                 TextButton.icon(
                   onPressed: _showJumpDialog,
@@ -606,14 +604,14 @@ class _QuranScreenState extends State<QuranScreen> {
                     Icons.format_list_numbered,
                     size: 16,
                   ),
-                  label: const Text('পৃষ্ঠা পরিবর্তন'),
+                  label: Text(_t('পৃষ্ঠা পরিবর্তন', 'Go to Page')),
                 ),
                 TextButton.icon(
                   onPressed: _currentPage < _pageCount
                       ? () => _jump(_currentPage + 1)
                       : null,
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('পরের পৃষ্ঠা'),
+                  label: Text(_t('পরের পৃষ্ঠা', 'Next Page')),
                 ),
               ],
             ),
