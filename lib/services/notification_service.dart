@@ -58,13 +58,15 @@ class NotificationService {
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'dainik_amol_alarms',
+        'dainik_amol_alarms_v2',
         'দৈনিক আমল অ্যালার্ম',
-        channelDescription: 'নামাজ ও দৈনিক আমলের অ্যালার্ম',
+        channelDescription: 'শব্দ ও ভাইব্রেশনসহ নামাজের অ্যালার্ম',
         importance: Importance.max,
-        priority: Priority.high,
+        priority: Priority.max,
         playSound: true,
         enableVibration: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        category: AndroidNotificationCategory.alarm,
         fullScreenIntent: true,
       ),
     );

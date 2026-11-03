@@ -14,13 +14,15 @@ import 'screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('bn', null);
-  await NotificationService.instance.initialize();
-  try {
-    await initializeBackgroundReminderRefresh();
-  } catch (e) {
-    debugPrint('Background reminder initialization failed: $e');
-  }
   runApp(const DainikAmolApp());
+
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await initializeBackgroundReminderRefresh();
+    } catch (e) {
+      debugPrint('Background reminder initialization failed: $e');
+    }
+  });
 }
 
 class DainikAmolApp extends StatefulWidget {
@@ -175,11 +177,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) {
-          _pageController.animateToPage(
-            idx,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
+          _pageController.jumpToPage(idx);
         },
         destinations: [
           NavigationDestination(icon: const Icon(Icons.home_outlined), label: isBn ? 'হোম' : 'Home'),
