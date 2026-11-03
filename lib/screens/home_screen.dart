@@ -30,6 +30,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String _currentTime = '';
   String _countdown = '';
   String _nextPrayerName = '';
+  String _waqtLabel = '';
+  bool _isMakruhTime = false;
   String _locationMessage = '';
 
   int _completedAmols = 0;
@@ -274,21 +276,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
       String countdown = '';
       String nextPrayer = '';
+      String waqtLabel = '';
+      bool isMakruh = false;
 
       if (prayerTimes != null && _coords != null) {
         final params = _getParams();
-        final todayTimes = prayerTimes!;
+        final times = prayerTimes!;
+
+        final fajr = times.fajr;
+        final sunrise = times.sunrise;
+        final dhuhr = times.dhuhr;
+        final asr = times.asr;
+        final maghrib = times.maghrib;
+        final isha = times.isha;
 
         final prayerList = [
-          {'name': 'Fajr', 'time': todayTimes.fajr},
-          {'name': 'Dhuhr', 'time': todayTimes.dhuhr},
-          {'name': 'Asr', 'time': todayTimes.asr},
-          {'name': 'Maghrib', 'time': todayTimes.maghrib},
-          {'name': 'Isha', 'time': todayTimes.isha},
+          {'name': 'Fajr', 'time': fajr},
+          {'name': 'Dhuhr', 'time': dhuhr},
+          {'name': 'Asr', 'time': asr},
+          {'name': 'Maghrib', 'time': maghrib},
+          {'name': 'Isha', 'time': isha},
         ];
 
         DateTime? nextTime;
-
         for (final prayer in prayerList) {
           final prayerTime = prayer['time'] as DateTime;
           if (prayerTime.isAfter(now)) {
@@ -301,16 +311,88 @@ class _HomeScreenState extends State<HomeScreen> {
         if (nextTime == null) {
           final tomorrow = PrayerTimes(
             _coords!,
-            DateComponents.from(
-              now.add(const Duration(days: 1)),
-            ),
+            DateComponents.from(now.add(const Duration(days: 1))),
             params,
           );
           nextTime = tomorrow.fajr;
           nextPrayer = 'Fajr';
         }
 
-        final difference = nextTime.difference(now);
+        DateTime countdownTarget = nextTime;
+
+        final makruhPeriods = [
+          {
+            'bn': 'সূর্যোদয়ের',
+            'en': 'Sunrise',
+            'start': sunrise,
+            'end': sunrise.add(const Duration(minutes: 15)),
+          },
+          {
+            'bn': 'যাওয়ালের',
+            'en': 'Zawal',
+            'start': dhuhr.subtract(const Duration(minutes: 5)),
+            'end': dhuhr,
+          },
+          {
+            'bn': 'সূর্যাস্তের',
+            'en': 'Sunset',
+            'start': maghrib.subtract(const Duration(minutes: 15)),
+            'end': maghrib,
+          },
+        ];
+
+        for (final period in makruhPeriods) {
+          final start = period['start'] as DateTime;
+          final end = period['end'] as DateTime;
+          if (!now.isBefore(start) && now.isBefore(end)) {
+            isMakruh = true;
+            countdownTarget = end;
+            waqtLabel = widget.isBn
+                ? '${period['bn']} মাকরুহ ওয়াক্ত শেষ হতে বাকি'
+                : '${period['en']} makruh time ends in';
+            break;
+          }
+        }
+
+        if (!isMakruh) {
+          if (now.isBefore(fajr)) {
+            waqtLabel = widget.isBn
+                ? 'ফজর শুরু হতে বাকি'
+                : 'Fajr begins in';
+            countdownTarget = fajr;
+          } else if (now.isBefore(sunrise)) {
+            waqtLabel = widget.isBn
+                ? 'ফজরের ওয়াক্ত বাকি আছে'
+                : 'Fajr time remaining';
+            countdownTarget = sunrise;
+          } else if (now.isBefore(dhuhr.subtract(const Duration(minutes: 5)))) {
+            waqtLabel = widget.isBn
+                ? 'যোহরের ওয়াক্ত শুরু হতে বাকি'
+                : 'Dhuhr begins in';
+            countdownTarget = dhuhr;
+          } else if (now.isBefore(asr)) {
+            waqtLabel = widget.isBn
+                ? 'যোহরের ওয়াক্ত বাকি আছে'
+                : 'Dhuhr time remaining';
+            countdownTarget = asr;
+          } else if (now.isBefore(maghrib.subtract(const Duration(minutes: 15)))) {
+            waqtLabel = widget.isBn
+                ? 'আসরের ওয়াক্ত বাকি আছে'
+                : 'Asr time remaining';
+            countdownTarget = maghrib;
+          } else if (now.isBefore(isha)) {
+            waqtLabel = widget.isBn
+                ? 'মাগরিবের ওয়াক্ত বাকি আছে'
+                : 'Maghrib time remaining';
+            countdownTarget = isha;
+          } else {
+            waqtLabel = widget.isBn
+                ? 'ইশার ওয়াক্ত বাকি আছে'
+                : 'Isha time remaining';
+          }
+        }
+
+        final difference = countdownTarget.difference(now);
         countdown =
             '${difference.inHours.toString().padLeft(2, '0')}:'
             '${(difference.inMinutes % 60).toString().padLeft(2, '0')}:'
@@ -321,6 +403,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _currentTime = timeText;
         _countdown = countdown;
         _nextPrayerName = nextPrayer;
+        _waqtLabel = waqtLabel;
+        _isMakruhTime = isMakruh;
       });
     }
 
@@ -535,8 +619,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    double percent = _totalActiveAmols == 0 ? 0 : (_completedAmols / _totalActiveAmols);
-    int percentInt = (percent * 100).toInt();
     List<AmalItem> runningAmols = _getRunningAmols();
 
     String hijriDate = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib);
@@ -638,28 +720,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Card(
-            color: isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9),
-            elevation: 1.5,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(widget.isBn ? 'আমলের অগ্রগতি' : 'Amal Progress', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
-                      Text('$_completedAmols/$_totalActiveAmols ${widget.isBn ? "সম্পন্ন" : "Done"} — $percentInt%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(value: percent.clamp(0.0, 1.0), minHeight: 8, borderRadius: BorderRadius.circular(5), color: const Color(0xFF0D5C3A)),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
+
           Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.green.shade300)),
@@ -712,24 +773,66 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 14),
 
           Card(
-            color: const Color(0xFF0D5C3A),
+            color: _isMakruhTime
+                ? (isDark ? const Color(0xFF7F1D1D) : Colors.red.shade100)
+                : (isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              child: Column(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.isBn ? 'পরবর্তী নামাজ' : 'Next Prayer', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text(_getPrayerName(_nextPrayerName), style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: Text(
+                          _waqtLabel,
+                          style: TextStyle(
+                            color: _isMakruhTime
+                                ? (isDark ? Colors.red.shade100 : Colors.red.shade900)
+                                : (isDark ? Colors.white : const Color(0xFF0D5C3A)),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _countdown.isEmpty ? '--:--:--' : _countdown,
+                        style: TextStyle(
+                          color: _isMakruhTime
+                              ? (isDark ? Colors.white : Colors.red.shade900)
+                              : (isDark ? Colors.amberAccent : const Color(0xFF0D5C3A)),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  Divider(
+                    height: 18,
+                    color: _isMakruhTime ? Colors.red.shade300 : null,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.isBn ? 'বাকি সময়' : 'Time Left', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text(_countdown.isEmpty ? '--:--:--' : _countdown, style: const TextStyle(color: Colors.amberAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        widget.isBn ? 'পরবর্তী নামাজ' : 'Next Prayer',
+                        style: TextStyle(
+                          color: _isMakruhTime
+                              ? (isDark ? Colors.red.shade100 : Colors.red.shade900)
+                              : (isDark ? Colors.white70 : const Color(0xFF0D5C3A)),
+                        ),
+                      ),
+                      Text(
+                        _getPrayerName(_nextPrayerName),
+                        style: TextStyle(
+                          color: _isMakruhTime
+                              ? (isDark ? Colors.white : Colors.red.shade900)
+                              : (isDark ? Colors.white : const Color(0xFF0D5C3A)),
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -787,12 +890,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       widget.isBn ? 'সূর্যাস্ত' : 'Sunset',
                       prayerTimes!.maghrib.subtract(const Duration(minutes: 15)),
                       prayerTimes!.maghrib,
-                    ),
-                    Text(
-                      widget.isBn
-                          ? 'সময়গুলো আনুমানিক; স্থানীয় নির্ভরযোগ্য সময়সূচির সঙ্গে মিলিয়ে নিন।'
-                          : 'Times are approximate; verify with a reliable local timetable.',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
                     ),
                   ],
                 ),
