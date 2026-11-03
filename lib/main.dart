@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/notification_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/amal_screen.dart';
 import 'screens/quran_screen.dart';
@@ -11,6 +12,7 @@ import 'screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('bn', null);
+  await NotificationService.instance.initialize();
   runApp(const DainikAmolApp());
 }
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class AlarmScreen extends StatefulWidget {
   final bool isBn;
@@ -64,6 +65,9 @@ class _AlarmScreenState extends State<AlarmScreen> {
 
   final Map<String, bool> _alarms = {};
   final Map<String, bool> _notifications = {};
+  final Map<String, String> _alarmModes = {};
+  final Map<String, int> _alarmDelays = {};
+  final Map<String, TimeOfDay> _fixedTimes = {};
   Timer? _alarmVibrateTimer;
   bool _isPlaying = false;
 
@@ -103,24 +107,184 @@ class _AlarmScreenState extends State<AlarmScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       for (var a in prayerAlarms) {
-        _alarms[a['id']!] = prefs.getBool(a['id']!) ?? true;
+        final id = a['id']!;
+        _alarms[id] = prefs.getBool(id) ?? true;
+        _alarmModes[id] = prefs.getString('alarm_mode_$id') ?? 'prayer';
+        _alarmDelays[id] = prefs.getInt('alarm_delay_$id') ?? 15;
+        final parts = (prefs.getString('alarm_fixed_$id') ?? '07:30').split(':');
+        _fixedTimes[id] = TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
       }
       for (var n in amalNotifications) {
         _notifications[n['id']!] = prefs.getBool(n['id']!) ?? true;
       }
     });
+
+    await _schedulePrayerAlarms();
+  }
+
+  Future<void> _schedulePrayerAlarms() async {
+    if (widget.coords == null) return;
+
+    final service = NotificationService.instance;
+    await service.initialize();
+
+    final now = DateTime.now();
+
+    for (int day = 0; day < 7; day++) {
+      final date = DateTime(now.year, now.month, now.day + day);
+
+      for (int index = 0; index < prayerAlarms.length; index++) {
+        final item = prayerAlarms[index];
+        final id = item['id']!;
+        final enabled = _alarms[id] ?? true;
+
+        final dayNumber = DateTime.utc(
+          date.year, date.month, date.day,
+        ).difference(DateTime.utc(2020, 1, 1)).inDays;
+        final notificationId = dayNumber * 10 + index;
+
+        await service.cancelAlarm(notificationId);
+        if (!enabled) continue;
+
+        DateTime? alarmTime;
+        final mode = _alarmModes[id] ?? 'prayer';
+
+        if (mode == 'fixed') {
+          final fixed = _fixedTimes[id] ??
+              const TimeOfDay(hour: 7, minute: 30);
+          alarmTime = DateTime(
+            date.year, date.month, date.day,
+            fixed.hour, fixed.minute,
+          );
+        } else {
+          alarmTime = _getAlarmTime(id, date);
+          if (alarmTime != null && mode == 'delay') {
+            alarmTime = alarmTime.add(
+              Duration(minutes: _alarmDelays[id] ?? 15),
+            );
+          }
+        }
+
+        if (alarmTime == null || !alarmTime.isAfter(now)) continue;
+
+        await service.scheduleAlarm(
+          id: notificationId,
+          title: item['titleBn']!,
+          body: 'নামাজের অ্যালার্ম • দৈনিক আমল',
+          dateTime: alarmTime,
+          payload: id,
+        );
+      }
+    }
   }
 
   Future<void> _toggleAlarm(String id, bool val) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(id, val);
     setState(() => _alarms[id] = val);
+    await _schedulePrayerAlarms();
+  }
+
+  Future<String> _getAlarmMode(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('alarm_mode_$id') ?? 'prayer';
+  }
+
+  Future<int> _getAlarmDelay(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('alarm_delay_$id') ?? 15;
+  }
+
+  Future<TimeOfDay> _getFixedAlarmTime(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString('alarm_fixed_$id') ?? '07:30';
+    final parts = value.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  }
+
+  Future<void> _saveAlarmMode(String id, String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('alarm_mode_$id', mode);
+  }
+
+  Future<void> _saveAlarmDelay(String id, int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('alarm_delay_$id', minutes);
+  }
+
+  Future<void> _saveFixedAlarmTime(String id, TimeOfDay time) async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    await prefs.setString('alarm_fixed_$id', value);
   }
 
   Future<void> _toggleNotification(String id, bool val) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(id, val);
     setState(() => _notifications[id] = val);
+  }
+
+  Future<void> _changeAlarmMode(String id, String mode) async {
+    await _saveAlarmMode(id, mode);
+    if (mounted) setState(() => _alarmModes[id] = mode);
+    await _schedulePrayerAlarms();
+  }
+
+  Future<void> _changeAlarmDelay(String id, int minutes) async {
+    await _saveAlarmDelay(id, minutes);
+    if (mounted) setState(() => _alarmDelays[id] = minutes);
+    await _schedulePrayerAlarms();
+  }
+
+  Future<void> _customAlarmDelay(String id) async {
+    final controller = TextEditingController(
+      text: (_alarmDelays[id] ?? 15).toString(),
+    );
+    final value = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(widget.isBn ? 'কত মিনিট যোগ করবেন?' : 'Add how many minutes?'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: widget.isBn ? 'মিনিট' : 'Minutes',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(widget.isBn ? 'বাতিল' : 'Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final n = int.tryParse(controller.text.trim());
+              if (n != null && n >= 0 && n <= 1440) {
+                Navigator.pop(ctx, n);
+              }
+            },
+            child: Text(widget.isBn ? 'সংরক্ষণ' : 'Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value != null) await _changeAlarmDelay(id, value);
+  }
+
+  Future<void> _pickFixedTime(String id) async {
+    final initial = _fixedTimes[id] ?? const TimeOfDay(hour: 7, minute: 30);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked == null) return;
+    await _saveFixedAlarmTime(id, picked);
+    if (mounted) setState(() => _fixedTimes[id] = picked);
+    await _schedulePrayerAlarms();
   }
 
   // ফোনের আসল সিস্টেম অ্যালার্ট সাউন্ড ও হার্ডওয়্যার ভাইব্রেশন অ্যালার্ম
@@ -261,15 +425,109 @@ class _AlarmScreenState extends State<AlarmScreen> {
           Text(widget.isBn ? 'নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)' : 'Prayer Alarms', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...prayerAlarms.map((a) {
-            bool isSet = _alarms[a['id']] ?? true;
+            final id = a['id']!;
+            final isSet = _alarms[id] ?? true;
+            final mode = _alarmModes[id] ?? 'prayer';
+            final delay = _alarmDelays[id] ?? 15;
+            final fixedTime = _fixedTimes[id] ?? const TimeOfDay(hour: 7, minute: 30);
+
             return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              child: SwitchListTile(
-                secondary: Icon(isSet ? Icons.alarm_on : Icons.alarm_off, color: isSet ? const Color(0xFF0D5C3A) : Colors.grey),
-                title: Text(widget.isBn ? a['titleBn']! : a['titleEn']!, style: const TextStyle(fontWeight: FontWeight.w600)),
-                value: isSet,
-                activeColor: const Color(0xFF0D5C3A),
-                onChanged: (val) => _toggleAlarm(a['id']!, val),
+              margin: const EdgeInsets.symmetric(vertical: 5),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      secondary: Icon(
+                        isSet ? Icons.alarm_on : Icons.alarm_off,
+                        color: isSet ? const Color(0xFF0D5C3A) : Colors.grey,
+                      ),
+                      title: Text(
+                        widget.isBn ? a['titleBn']! : a['titleEn']!,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      value: isSet,
+                      activeColor: const Color(0xFF0D5C3A),
+                      onChanged: (val) => _toggleAlarm(id, val),
+                    ),
+                    if (isSet) ...[
+                      const Divider(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.isBn ? 'অ্যালার্মের সময় নির্ধারণ' : 'Alarm time setting',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: mode,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'prayer',
+                                  child: Text(widget.isBn ? 'ওয়াক্ত অনুযায়ী' : 'Prayer time'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'delay',
+                                  child: Text(widget.isBn ? 'ওয়াক্তের পর মিনিট যোগ' : 'Minutes after prayer'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'fixed',
+                                  child: Text(widget.isBn ? 'প্রতিদিন নির্দিষ্ট ঘড়ির সময়' : 'Fixed daily clock time'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) _changeAlarmMode(id, value);
+                              },
+                            ),
+                            if (mode == 'delay') ...[
+                              const SizedBox(height: 12),
+                              Text(widget.isBn ? 'কত মিনিট পরে অ্যালার্ম বাজবে?' : 'Delay after prayer'),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 7,
+                                runSpacing: 7,
+                                children: [0, 10, 15, 20, 30, 45, 60].map((m) {
+                                  return ChoiceChip(
+                                    label: Text('$m ${widget.isBn ? 'মিনিট' : 'min'}'),
+                                    selected: delay == m,
+                                    onSelected: (_) => _changeAlarmDelay(id, m),
+                                  );
+                                }).toList(),
+                              ),
+                              const SizedBox(height: 8),
+                              OutlinedButton.icon(
+                                onPressed: () => _customAlarmDelay(id),
+                                icon: const Icon(Icons.edit),
+                                label: Text(
+                                  widget.isBn
+                                      ? 'নিজের মতো মিনিট লিখুন (বর্তমান: $delay)'
+                                      : 'Custom minutes (current: $delay)',
+                                ),
+                              ),
+                            ],
+                            if (mode == 'fixed') ...[
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => _pickFixedTime(id),
+                                icon: const Icon(Icons.access_time),
+                                label: Text(
+                                  '${widget.isBn ? 'নির্দিষ্ট সময়' : 'Fixed time'}: ${fixedTime.format(context)}',
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           }),
