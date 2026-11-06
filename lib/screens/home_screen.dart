@@ -27,6 +27,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
+  TextDirection get _textDirection =>
+      widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+
+  String _amalTitle(AmalItem item) {
+    if (widget.language == 'ar') {
+      return item.titleAr.isNotEmpty ? item.titleAr : item.titleEn;
+    }
+    return widget.isBn ? item.titleBn : item.titleEn;
+  }
+
+  String _amalCategory(AmalItem item) {
+    if (widget.language == 'ar') {
+      return item.categoryAr.isNotEmpty ? item.categoryAr : item.categoryEn;
+    }
+    return widget.isBn ? item.categoryBn : item.categoryEn;
+  }
   PrayerTimes? prayerTimes;
   Timer? _timer;
   String _currentTime = '';
@@ -841,7 +860,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(_t('নামাজের সময়', 'Prayer Times', 'مواقيت الصلاة'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
                         InkWell(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn, language: widget.language, coords: _coords, calculationMethod: CalculationMethod.karachi, madhab: widget.madhab))),
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(Icons.alarm_on, size: 18, color: Color(0xFF0D5C3A)),
                               SizedBox(width: 4),

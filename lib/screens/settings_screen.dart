@@ -88,7 +88,7 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(_t('বর্তমান: বাংলা', 'Current: English', 'اللغة الحالية: العربية'), textDirection: _textDirection),
             trailing: DropdownButton<String>(
               value: language,
-              items: const [
+              items: [
                 DropdownMenuItem(value: 'bn', child: Text(_t('বাংলা', 'Bengali', 'البنغالية'))),
                 DropdownMenuItem(value: 'en', child: Text('English')),
                 DropdownMenuItem(value: 'ar', child: Directionality(textDirection: TextDirection.rtl, child: Text('العربية'))),

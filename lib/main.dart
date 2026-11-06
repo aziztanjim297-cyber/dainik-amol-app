@@ -216,7 +216,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
                 Icon(Icons.alarm_on, color: Colors.deepOrange, size: 28),
                 SizedBox(width: 8),
