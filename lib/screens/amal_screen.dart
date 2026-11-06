@@ -9,13 +9,41 @@ import '../services/notification_service.dart';
 class AmalListScreen extends StatefulWidget {
   final bool isBn;
   final String madhab;
-  const AmalListScreen({super.key, required this.isBn, required this.madhab});
+  final VoidCallback onAmalCompleted;
+  final String language;
+  const AmalListScreen({
+    super.key,
+    required this.isBn,
+    required this.madhab,
+    required this.onAmalCompleted,
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<AmalListScreen> createState() => _AmalListScreenState();
 }
 
 class _AmalListScreenState extends State<AmalListScreen> {
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
+  String _amalTitle(AmalItem item) {
+    if (widget.language == 'ar') {
+      return item.titleAr.isNotEmpty ? item.titleAr : item.titleEn;
+    }
+    return widget.isBn ? item.titleBn : item.titleEn;
+  }
+
+  String _amalCategory(AmalItem item) {
+    if (widget.language == 'ar') {
+      return item.categoryAr.isNotEmpty ? item.categoryAr : item.categoryEn;
+    }
+    return widget.isBn ? item.categoryBn : item.categoryEn;
+  }
+
+  TextDirection get _textDirection =>
+      widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+
   final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> amolStatus = {};
   Map<String, bool> enabledAmols = {};
@@ -89,12 +117,15 @@ class _AmalListScreenState extends State<AmalListScreen> {
     await NotificationService.instance.cancelAmalReminders(id);
     if (!mounted) return;
     setState(() => amolStatus[id] = true);
+    widget.onAmalCompleted();
   }
 
   // নতুন আমল যোগ ও ঐচ্ছিক আমল কাস্টমাইজেশন ডায়ালগ
   void _openCustomizationDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF1E2923) : null,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
@@ -107,7 +138,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.isBn ? 'আমল কাস্টমাইজ ও নতুন আমল যোগ' : 'Customize & Add Amals', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                  Text(_t('আমল কাস্টমাইজ ও নতুন আমল যোগ', 'Customize & Add Amals', 'تخصيص الأعمال وإضافة عمل جديد'), textDirection: _textDirection, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A))),
                   IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                 ],
               ),
@@ -115,20 +146,28 @@ class _AmalListScreenState extends State<AmalListScreen> {
 
               // নতুন আমল যোগ করার ফর্ম
               Card(
-                color: const Color(0xFFF1F8F5),
+                color: isDark ? const Color(0xFF26352D) : const Color(0xFFF1F8F5),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.isBn ? '+ নিজের নতুন আমল যুক্ত করুন' : '+ Add Custom Amal', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                      Text(
+                        _t('+ নিজের নতুন আমল যুক্ত করুন', '+ Add Custom Amal', '+ أضف عملاً مخصصاً'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _customTitleController,
+                        style: TextStyle(color: isDark ? Colors.white : null),
                         decoration: InputDecoration(
-                          hintText: widget.isBn ? 'আমলের নাম লিখুন (যেমন: ৪ রাকাত চাশত)' : 'Enter amal title',
+                          hintText: _t('আমলের নাম লিখুন (যেমন: ৪ রাকাত চাশত)', 'Enter amal title', 'أدخل اسم العمل'),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: isDark ? const Color(0xFF18221D) : Colors.white,
+                          hintStyle: TextStyle(color: isDark ? Colors.white54 : null),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         ),
@@ -139,16 +178,30 @@ class _AmalListScreenState extends State<AmalListScreen> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: _selectedPrayerCategory,
-                              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 4), border: OutlineInputBorder()),
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                filled: isDark,
+                                fillColor: isDark ? const Color(0xFF18221D) : null,
+                                border: const OutlineInputBorder(),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A),
+                                  ),
+                                ),
+                              ),
+                              style: TextStyle(color: isDark ? Colors.white : null),
                               items: [
-                                DropdownMenuItem(value: 'tahajjud', child: Text(widget.isBn ? 'তাহাজ্জুদ সময়' : 'Tahajjud')),
-                                DropdownMenuItem(value: 'fajr', child: Text(widget.isBn ? 'ফজর সময়' : 'Fajr')),
-                                DropdownMenuItem(value: 'post_fajr', child: Text(widget.isBn ? 'সকাল/ইশরাক' : 'Morning/Ishraq')),
-                                DropdownMenuItem(value: 'dhuhr', child: Text(widget.isBn ? 'যোহর সময়' : 'Dhuhr')),
-                                DropdownMenuItem(value: 'asr', child: Text(widget.isBn ? 'আসর সময়' : 'Asr')),
-                                DropdownMenuItem(value: 'maghrib', child: Text(widget.isBn ? 'মাগরিব সময়' : 'Maghrib')),
-                                DropdownMenuItem(value: 'isha', child: Text(widget.isBn ? 'ইশা সময়' : 'Isha')),
-                                DropdownMenuItem(value: 'bedtime', child: Text(widget.isBn ? 'ঘুমানোর সময়' : 'Bedtime')),
+                                DropdownMenuItem(value: 'tahajjud', child: Text(_t('তাহাজ্জুদ সময়', 'Tahajjud', 'وقت التهجد'))),
+                                DropdownMenuItem(value: 'fajr', child: Text(_t('ফজর সময়', 'Fajr', 'وقت الفجر'))),
+                                DropdownMenuItem(value: 'post_fajr', child: Text(_t('সকাল/ইশরাক', 'Morning/Ishraq', 'الصباح / الإشراق'))),
+                                DropdownMenuItem(value: 'dhuhr', child: Text(_t('যোহর সময়', 'Dhuhr', 'وقت الظهر'))),
+                                DropdownMenuItem(value: 'asr', child: Text(_t('আসর সময়', 'Asr', 'وقت العصر'))),
+                                DropdownMenuItem(value: 'maghrib', child: Text(_t('মাগরিব সময়', 'Maghrib', 'وقت المغرب'))),
+                                DropdownMenuItem(value: 'isha', child: Text(_t('ইশা সময়', 'Isha', 'وقت العشاء'))),
+                                DropdownMenuItem(value: 'bedtime', child: Text(_t('ঘুমানোর সময়', 'Bedtime', 'وقت النوم'))),
                               ],
                               onChanged: (val) {
                                 if (val != null) setModalState(() => _selectedPrayerCategory = val);
@@ -157,20 +210,23 @@ class _AmalListScreenState extends State<AmalListScreen> {
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark ? const Color(0xFF1B8E5B) : const Color(0xFF0D5C3A),
+                              foregroundColor: Colors.white,
+                            ),
                             onPressed: () async {
                               if (_customTitleController.text.trim().isNotEmpty) {
                                 String title = _customTitleController.text.trim();
-                                await AmalService.addCustomAmal(title, _selectedPrayerCategory, widget.isBn ? 'কাস্টম আমল' : 'Custom');
+                                await AmalService.addCustomAmal(title, _selectedPrayerCategory, _t('কাস্টম আমল', 'Custom', 'عمل مخصص'));
                                 _customTitleController.clear();
                                 await _loadAmolData();
                                 await _refreshAmalReminders();
                                 setModalState(() {});
                                 setState(() {});
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(widget.isBn ? 'নতুন আমল সফলভাবে যুক্ত হয়েছে!' : 'New amal added!')));
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t('নতুন আমল সফলভাবে যুক্ত হয়েছে!', 'New amal added!', 'تمت إضافة العمل الجديد بنجاح!'))));
                               }
                             },
-                            child: Text(widget.isBn ? 'যোগ করুন' : 'Add'),
+                            child: Text(_t('যোগ করুন', 'Add', 'إضافة')),
                           )
                         ],
                       ),
@@ -179,7 +235,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              Text(widget.isBn ? 'আমল তালিকা (চালু / বন্ধ করুন):' : 'Amal List (Enable / Disable):', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(_t('আমল তালিকা (চালু / বন্ধ করুন):', 'Amal List (Enable / Disable):', 'قائمة الأعمال (تفعيل / تعطيل):'), style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
 
               Expanded(
@@ -188,11 +244,15 @@ class _AmalListScreenState extends State<AmalListScreen> {
                     bool isEnabled = enabledAmols[a.id] ?? true;
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 3),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E2923) : null,
+                        border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: ListTile(
                         dense: true,
-                        title: Text(widget.isBn ? a.titleBn : a.titleEn, style: TextStyle(fontWeight: FontWeight.w600, color: a.isFard ? Colors.black87 : null)),
-                        subtitle: Text(a.isFard ? (widget.isBn ? 'ফরজ (বাদ দেওয়া যাবে না)' : 'Fard (Mandatory)') : (a.isCustom ? (widget.isBn ? 'আপনার কাস্টম আমল' : 'Custom') : (widget.isBn ? 'ঐচ্ছিক' : 'Optional'))),
+                        title: Text(_amalTitle(a), textDirection: _textDirection, style: TextStyle(fontWeight: FontWeight.w600, color: a.isFard ? (isDark ? Colors.white : Colors.black87) : null)),
+                        subtitle: Text(a.isFard ? (_t('ফরজ (বাদ দেওয়া যাবে না)', 'Fard (Mandatory)', 'فرض (لا يمكن تعطيله)')) : (a.isCustom ? (_t('আপনার কাস্টম আমল', 'Custom', 'عمل مخصص')) : (_t('ঐচ্ছিক', 'Optional', 'اختياري'))), textDirection: _textDirection),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -238,7 +298,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
   }
 
   Map<String, dynamic> _getAmolStatus(AmalItem item) {
-    if (prayerTimes == null) return {'status': 'running', 'label': widget.isBn ? 'চলমান' : 'Running', 'color': Colors.green, 'canCheck': true};
+    if (prayerTimes == null) return {'status': 'running', 'label': _t('চলমান', 'Running', 'جارٍ'), 'color': Colors.green, 'canCheck': true};
     DateTime now = DateTime.now();
     DateTime start, end;
 
@@ -279,18 +339,19 @@ class _AmalListScreenState extends State<AmalListScreen> {
     DateTime gracePeriodEnd = end.add(const Duration(minutes: 10));
 
     if (now.isBefore(start)) {
-      return {'status': 'upcoming', 'label': widget.isBn ? 'Upcoming' : 'Upcoming', 'color': Colors.blueGrey, 'canCheck': false};
+      return {'status': 'upcoming', 'label': _t('আসন্ন', 'Upcoming', 'قادم'), 'color': Colors.blueGrey, 'canCheck': false};
     } else if (now.isAfter(start) && now.isBefore(end)) {
-      return {'status': 'running', 'label': widget.isBn ? 'Running' : 'Running', 'color': Colors.green, 'canCheck': true};
+      return {'status': 'running', 'label': _t('চলমান', 'Running', 'جارٍ'), 'color': Colors.green, 'canCheck': true};
     } else if (now.isAfter(end) && now.isBefore(gracePeriodEnd)) {
-      return {'status': 'just_passed', 'label': widget.isBn ? 'Just Passed (১০ মি.)' : 'Just Passed (10m)', 'color': Colors.deepOrange, 'canCheck': true};
+      return {'status': 'just_passed', 'label': _t('এইমাত্র শেষ (১০ মি.)', 'Just Passed (10m)', 'انتهى للتو (١٠ دقائق)'), 'color': Colors.deepOrange, 'canCheck': true};
     } else {
-      return {'status': 'past', 'label': widget.isBn ? 'Past' : 'Past', 'color': Colors.red, 'canCheck': false};
+      return {'status': 'past', 'label': _t('সময় শেষ', 'Past', 'انتهى الوقت'), 'color': Colors.red, 'canCheck': false};
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeAmals = allAmals.where((a) => enabledAmols[a.id] ?? true).toList();
     int completedCount = activeAmals.where((a) => amolStatus[a.id] == true).length;
     double progress = activeAmals.isEmpty ? 0 : completedCount / activeAmals.length;
@@ -298,36 +359,36 @@ class _AmalListScreenState extends State<AmalListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'দৈনন্দিন আমল তালিকা' : 'Daily Amal Checklist', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('দৈনন্দিন আমল তালিকা', 'Daily Amal Checklist', 'قائمة الأعمال اليومية'), textDirection: _textDirection, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
-            tooltip: widget.isBn ? 'আমল কাস্টমাইজ' : 'Customize Amals',
+            tooltip: _t('আমল কাস্টমাইজ', 'Customize Amals', 'تخصيص الأعمال'),
             onPressed: _openCustomizationDialog,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF0D5C3A),
+        backgroundColor: isDark ? const Color(0xFF1B8E5B) : const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         onPressed: _openCustomizationDialog,
         icon: const Icon(Icons.add_task),
-        label: Text(widget.isBn ? 'আমল কাস্টমাইজ ও নতুন আমল' : 'Customize & Add Amals'),
+        label: Text(_t('আমল কাস্টমাইজ ও নতুন আমল', 'Customize & Add Amals', 'تخصيص الأعمال وإضافة عمل')),
       ),
       body: ListView(
         padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 80),
         children: [
           Card(
-            color: const Color(0xFFE8F5E9),
+            color: isDark ? const Color(0xFF26352D) : const Color(0xFFE8F5E9),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('${widget.isBn ? "অগ্রগতি" : "Progress"}: $completedCount/${activeAmals.length} ${widget.isBn ? "সম্পন্ন" : "Done"} — $percent%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
-                  const Icon(Icons.check_circle, color: Color(0xFF0D5C3A)),
+                  Text('${_t('অগ্রগতি', 'Progress', 'التقدم')}: $completedCount/${activeAmals.length} ${_t('সম্পন্ন', 'Done', 'مكتمل')} — $percent%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A))),
+                  Icon(Icons.check_circle, color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A)),
                 ],
               ),
             ),
@@ -340,25 +401,31 @@ class _AmalListScreenState extends State<AmalListScreen> {
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 4),
               decoration: BoxDecoration(
-                color: isDone ? Colors.green.shade50 : Colors.white,
+                color: isDark
+                    ? (isDone ? const Color(0xFF203A2C) : const Color(0xFF1E2923))
+                    : (isDone ? Colors.green.shade50 : Colors.white),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: isDone ? Colors.green : (item.isFard ? Colors.deepOrange.shade300 : Colors.grey.shade300), width: item.isFard ? 1.5 : 1.0),
+                border: Border.all(color: isDone
+                    ? (isDark ? const Color(0xFF66BB8A) : Colors.green)
+                    : (item.isFard
+                        ? Colors.deepOrange.shade300
+                        : (isDark ? Colors.white24 : Colors.grey.shade300)), width: item.isFard ? 1.5 : 1.0),
               ),
               child: ListTile(
                 leading: Icon(
                   item.isFard ? Icons.star_rounded : (item.isCustom ? Icons.bookmark_added : Icons.radio_button_checked),
-                  color: item.isFard ? Colors.deepOrange : const Color(0xFF0D5C3A),
+                  color: item.isFard ? Colors.deepOrange : (isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A)),
                 ),
-                title: Text(widget.isBn ? item.titleBn : item.titleEn, style: TextStyle(fontWeight: FontWeight.w600, decoration: isDone ? TextDecoration.lineThrough : null)),
+                title: Text(_amalTitle(item), textDirection: _textDirection, style: TextStyle(fontWeight: FontWeight.w600, decoration: isDone ? TextDecoration.lineThrough : null)),
                 subtitle: Row(
                   children: [
-                    Text(widget.isBn ? item.categoryBn : item.categoryEn, style: const TextStyle(fontSize: 12)),
+                    Text(_amalCategory(item), textDirection: _textDirection, style: const TextStyle(fontSize: 12)),
                     const SizedBox(width: 8),
                     if (!isDone)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(color: (st['color'] as Color).withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
-                        child: Text(st['label'], style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: st['color'])),
+                        child: Text(st['label'], textDirection: _textDirection, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: st['color'])),
                       ),
                   ],
                 ),
@@ -366,19 +433,19 @@ class _AmalListScreenState extends State<AmalListScreen> {
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(widget.isBn ? 'লক ' : 'Locked ', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                          const Icon(Icons.lock, color: Colors.green, size: 18),
+                          Text(_t('লক ', 'Locked ', 'مقفل '), style: TextStyle(color: isDark ? const Color(0xFF80D6A8) : Colors.green, fontWeight: FontWeight.bold)),
+                          Icon(Icons.lock, color: isDark ? const Color(0xFF80D6A8) : Colors.green, size: 18),
                         ],
                       )
                     : (st['canCheck'] == true
                         ? ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: st['status'] == 'just_passed' ? Colors.deepOrange : const Color(0xFF0D5C3A),
+                              backgroundColor: st['status'] == 'just_passed' ? Colors.deepOrange : (isDark ? const Color(0xFF1B8E5B) : const Color(0xFF0D5C3A)),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                             ),
                             onPressed: () => _toggleAmol(item.id),
-                            child: Text(widget.isBn ? 'টিক দিন' : 'Check'),
+                            child: Text(_t('টিক দিন', 'Check', 'تحديد')),
                           )
                         : Chip(label: Text(st['label'], style: const TextStyle(fontSize: 11, color: Colors.grey)))),
               ),

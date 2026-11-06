@@ -24,19 +24,33 @@ class AlarmRingingService : Service() {
     private var vibrator: Vibrator? = null
 
     companion object {
-        private const val CHANNEL_ID = "dainik_continuous_alarm_v1"
         private const val NOTIFICATION_ID = 74021
     }
+
+    private fun getLanguage(): String {
+        return getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            .getString("flutter.app_lang", "bn") ?: "bn"
+    }
+
+    private fun channelId(language: String) =
+        "dainik_continuous_alarm_${language}_v1"
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val title = intent?.getStringExtra("alarm_title") ?: "নামাজের অ্যালার্ম"
+        val language = getLanguage()
+        val defaultTitle = when (language) {
+            "ar" -> "منبه الصلاة"
+            "en" -> "Prayer Alarm"
+            else -> "নামাজের অ্যালার্ম"
+        }
+        val title = intent?.getStringExtra("alarm_title") ?: defaultTitle
         getSharedPreferences("dainik_alarm_state", MODE_PRIVATE)
             .edit().putBoolean("ringing", true).apply()
 
-        createNotificationChannel()
-        val notification = buildNotification(title)
+        createNotificationChannel(language)
+        val notification = buildNotification(title, language)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -53,14 +67,24 @@ class AlarmRingingService : Service() {
         return START_STICKY
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannel(language: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelName = when (language) {
+                "ar" -> "منبه مستمر"
+                "en" -> "Continuous Alarm"
+                else -> "একটানা অ্যালার্ম"
+            }
+            val channelDescription = when (language) {
+                "ar" -> "سيستمر المنبه في الرنين حتى إيقافه"
+                "en" -> "Alarm will sound until stopped"
+                else -> "অ্যালার্ম বন্ধ না করা পর্যন্ত শব্দ বাজবে"
+            }
             val channel = NotificationChannel(
-                CHANNEL_ID,
-                "একটানা অ্যালার্ম",
+                channelId(language),
+                channelName,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "অ্যালার্ম বন্ধ না করা পর্যন্ত শব্দ বাজবে"
+                description = channelDescription
                 setSound(null, null)
                 enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
@@ -70,7 +94,7 @@ class AlarmRingingService : Service() {
         }
     }
 
-    private fun buildNotification(title: String): Notification {
+    private fun buildNotification(title: String, language: String): Notification {
         val stopIntent = Intent(this, StopAlarmReceiver::class.java)
         val stopPending = PendingIntent.getBroadcast(
             this, 74022, stopIntent,
@@ -83,7 +107,7 @@ class AlarmRingingService : Service() {
         )
 
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, CHANNEL_ID)
+            Notification.Builder(this, channelId(language))
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
@@ -91,7 +115,7 @@ class AlarmRingingService : Service() {
 
         return builder
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("অ্যালার্ম বাজছে")
+            .setContentTitle(when (language) { "ar" -> "المنبه يعمل"; "en" -> "Alarm ringing"; else -> "অ্যালার্ম বাজছে" })
             .setContentText(title)
             .setCategory(Notification.CATEGORY_ALARM)
             .setPriority(Notification.PRIORITY_MAX)
@@ -102,7 +126,7 @@ class AlarmRingingService : Service() {
             .addAction(
                 Notification.Action.Builder(
                     android.R.drawable.ic_media_pause,
-                    "বন্ধ করুন",
+                    when (language) { "ar" -> "إيقاف"; "en" -> "Stop"; else -> "বন্ধ করুন" },
                     stopPending
                 ).build()
             )

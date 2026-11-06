@@ -7,13 +7,15 @@ import 'package:country_picker/country_picker.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   final bool isBn;
+  final String language;
   final VoidCallback onLocationChanged;
 
   const LocationSettingsScreen({
     super.key,
     required this.isBn,
+    String? language,
     required this.onLocationChanged,
-  });
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<LocationSettingsScreen> createState() =>
@@ -67,9 +69,11 @@ class _LocationSettingsScreenState
       _districts = jsonDecode(r[0].body);
       _upazilas = jsonDecode(r[1].body);
     } catch (_) {
-      _message = isBn
-          ? 'তালিকা আনতে সমস্যা হয়েছে। ইন্টারনেট পরীক্ষা করুন।'
-          : 'Could not load the lists. Check internet.';
+      _message = _t(
+          'তালিকা আনতে সমস্যা হয়েছে। ইন্টারনেট পরীক্ষা করুন。',
+          'Could not load the lists. Check internet.',
+          'تعذر تحميل القوائم. تحقق من اتصال الإنترنت.',
+        );
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -121,7 +125,7 @@ class _LocationSettingsScreenState
     widget.onLocationChanged();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isBn ? 'অবস্থান সংরক্ষিত হয়েছে' : 'Location saved')),
+      SnackBar(content: Text(_t('অবস্থান সংরক্ষিত হয়েছে', 'Location saved', 'تم حفظ الموقع'))),
     );
     Navigator.pop(context);
   }
@@ -135,7 +139,11 @@ class _LocationSettingsScreenState
 
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
-        throw Exception('ফোনের Location/GPS চালু করুন।');
+        throw Exception(_t(
+          'ফোনের Location/GPS চালু করুন।',
+          'Turn on your phone\'s Location/GPS.',
+          'يرجى تشغيل خدمة الموقع أو GPS في الهاتف.',
+        ));
       }
 
       var permission = await Geolocator.checkPermission();
@@ -145,13 +153,19 @@ class _LocationSettingsScreenState
       }
 
       if (permission == LocationPermission.denied) {
-        throw Exception('লোকেশন অনুমতি দেওয়া হয়নি।');
+        throw Exception(_t(
+          'লোকেশন অনুমতি দেওয়া হয়নি।',
+          'Location permission was denied.',
+          'لم يتم السماح بإذن الوصول إلى الموقع.',
+        ));
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw Exception(
+        throw Exception(_t(
           'লোকেশন অনুমতি স্থায়ীভাবে বন্ধ। ফোনের App Settings থেকে অনুমতি দিন।',
-        );
+          'Location permission is permanently denied. Allow it in your phone\'s app settings.',
+          'تم إيقاف إذن الموقع نهائيًا. اسمح به من إعدادات التطبيق في هاتفك.',
+        ));
       }
 
       final pos = await Geolocator.getCurrentPosition(
@@ -173,7 +187,11 @@ class _LocationSettingsScreenState
           _loading = false;
           _message = e.toString().replaceFirst('Exception: ', '');
           if (_message.contains('TimeoutException')) {
-            _message = '৩০ সেকেন্ডেও GPS অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন।';
+            _message = _t(
+              '৩০ সেকেন্ডেও GPS অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন।',
+              'GPS location was not found within 30 seconds. Please try again.',
+              'لم يتم العثور على موقع GPS خلال ٣٠ ثانية. حاول مرة أخرى.',
+            );
           }
         });
       }
@@ -207,7 +225,7 @@ class _LocationSettingsScreenState
 
   Future<void> _saveBangladeshLocation() async {
     if (_districtId == null || _upazilaId == null) {
-      setState(() => _message = 'জেলা ও উপজেলা নির্বাচন করুন।');
+      setState(() => _message = _t('জেলা ও উপজেলা নির্বাচন করুন।', 'Select a district and upazila.', 'يرجى اختيار المنطقة والناحية.'));
       return;
     }
 
@@ -218,7 +236,7 @@ class _LocationSettingsScreenState
     if (geo is! Map ||
         double.tryParse('${geo['lat']}') == null ||
         double.tryParse('${geo['lon']}') == null) {
-      setState(() => _message = 'অবস্থানের তথ্য পাওয়া যায়নি।');
+      setState(() => _message = _t('অবস্থানের তথ্য পাওয়া যায়নি.', 'Location information could not be found.', 'تعذر العثور على معلومات الموقع.'));
       return;
     }
 
@@ -234,11 +252,16 @@ class _LocationSettingsScreenState
     );
   }
 
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Directionality(
+      textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
       appBar: AppBar(
-        title: Text(isBn ? 'নামাজের সময়ের অবস্থান' : 'Prayer Location'),
+        title: Text(_t('নামাজের সময়ের অবস্থান', 'Prayer Location', 'موقع الصلاة')),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
@@ -247,10 +270,12 @@ class _LocationSettingsScreenState
         children: [
           ListTile(
             leading: const Icon(Icons.gps_fixed),
-            title: Text(isBn ? 'বর্তমান অবস্থান (GPS)' : 'Current GPS location'),
-            subtitle: Text(isBn
-                ? 'আপনার প্রকৃত অবস্থান ব্যবহার করুন'
-                : 'Use your actual location'),
+            title: Text(_t('বর্তমান অবস্থান (GPS)', 'Current GPS location', 'الموقع الحالي (GPS)')),
+            subtitle: Text(_t(
+              'আপনার প্রকৃত অবস্থান ব্যবহার করুন',
+              'Use your actual location',
+              'استخدم موقعك الفعلي',
+            )),
             onTap: _loading ? null : _useGps,
           ),
           const Divider(),
@@ -258,7 +283,7 @@ class _LocationSettingsScreenState
             onPressed: _selectCountry,
             icon: const Icon(Icons.public),
             label: Text(_countryName ??
-                (isBn ? 'দেশ নির্বাচন করুন' : 'Select country')),
+                _t('দেশ নির্বাচন করুন', 'Select country', 'اختر الدولة')),
           ),
           if (_countryCode == 'BD') ...[
             const SizedBox(height: 16),
@@ -271,7 +296,7 @@ class _LocationSettingsScreenState
                     : null,
                 isExpanded: true,
                 decoration: InputDecoration(
-                  labelText: isBn ? 'জেলা নির্বাচন করুন' : 'Select district',
+                  labelText: _t('জেলা নির্বাচন করুন', 'Select district', 'اختر المنطقة'),
                   border: const OutlineInputBorder(),
                 ),
                 items: _districts.map((d) {
@@ -292,7 +317,7 @@ class _LocationSettingsScreenState
                     : null,
                 isExpanded: true,
                 decoration: InputDecoration(
-                  labelText: isBn ? 'উপজেলা নির্বাচন করুন' : 'Select upazila',
+                  labelText: _t('উপজেলা নির্বাচন করুন', 'Select upazila', 'اختر الناحية'),
                   border: const OutlineInputBorder(),
                 ),
                 items: _filteredUpazilas.map((u) {
@@ -308,16 +333,18 @@ class _LocationSettingsScreenState
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _saveBangladeshLocation,
-                child: Text(isBn ? 'অবস্থান সংরক্ষণ করুন' : 'Save location'),
+                child: Text(_t('অবস্থান সংরক্ষণ করুন', 'Save location', 'حفظ الموقع')),
               ),
             ],
           ],
           if (_countryCode != null && _countryCode != 'BD')
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(isBn
-                  ? 'শুধু দেশের নাম দিয়ে নির্ভুল নামাজের সময় নির্ণয় সম্ভব নয়। GPS ব্যবহার করুন।'
-                  : 'A country name alone cannot determine accurate prayer times. Use GPS.'),
+              child: Text(_t(
+                'শুধু দেশের নাম দিয়ে নির্ভুল নামাজের সময় নির্ণয় সম্ভব নয়। GPS ব্যবহার করুন।',
+                'A country name alone cannot determine accurate prayer times. Use GPS.',
+                'لا يمكن تحديد أوقات الصلاة بدقة باسم الدولة فقط. استخدم GPS.',
+              )),
             ),
           if (_message.isNotEmpty)
             Padding(
@@ -327,14 +354,15 @@ class _LocationSettingsScreenState
           if (_message.isNotEmpty && !_loading && _countryCode == 'BD')
             TextButton(
               onPressed: _loadAdministrativeData,
-              child: Text(isBn ? 'আবার চেষ্টা করুন' : 'Try again'),
+              child: Text(_t('আবার চেষ্টা করুন', 'Try again', 'حاول مرة أخرى')),
             ),
           const SizedBox(height: 16),
           Text(
-            'District and upazila data: Open Admin Data (CC BY 4.0)',
+            _t('জেলা ও উপজেলা তথ্য: Open Admin Data (CC BY 4.0)', 'District and upazila data: Open Admin Data (CC BY 4.0)', 'بيانات المناطق والنواحي: Open Admin Data (CC BY 4.0)'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
+      ),
       ),
     );
   }

@@ -44,6 +44,12 @@ class MainActivity : FlutterActivity() {
                     }
                 }
 
+                "updateAlarmLanguage" -> {
+                    val language = call.argument<String>("language") ?: "bn"
+                    AlarmScheduler.updateLanguage(this, language)
+                    result.success(null)
+                }
+
                 "cancelAlarm" -> {
                     val id = call.argument<Number>("id")?.toInt()
                     if (id != null) AlarmScheduler.cancel(this, id)
@@ -68,7 +74,15 @@ class MainActivity : FlutterActivity() {
                 }
 
                 "startTestAlarm" -> {
-                    startAlarmService("অ্যালার্ম পরীক্ষা", -1)
+                    val language = getSharedPreferences(
+                        "FlutterSharedPreferences", MODE_PRIVATE
+                    ).getString("flutter.app_lang", "bn") ?: "bn"
+                    val testTitle = when (language) {
+                        "ar" -> "اختبار المنبه"
+                        "en" -> "Alarm Test"
+                        else -> "অ্যালার্ম পরীক্ষা"
+                    }
+                    startAlarmService(testTitle, -1)
                     result.success(null)
                 }
 

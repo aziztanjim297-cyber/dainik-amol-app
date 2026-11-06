@@ -57,11 +57,23 @@ class NotificationService {
 
     final scheduledTime = tz.TZDateTime.from(dateTime, tz.local);
 
-    const details = NotificationDetails(
+    final prefs = await SharedPreferences.getInstance();
+    final language = prefs.getString('app_lang') ?? 'bn';
+    final channelId = 'dainik_amol_alarms_${language}_v2';
+    final channelName = language == 'ar'
+        ? 'تنبيهات الأعمال اليومية'
+        : (language == 'en' ? 'Dainik Amal Alarms' : 'দৈনিক আমল অ্যালার্ম');
+    final channelDescription = language == 'ar'
+        ? 'تنبيهات الصلاة والأعمال مع الصوت والاهتزاز'
+        : (language == 'en'
+            ? 'Prayer and amal alarms with sound and vibration'
+            : 'শব্দ ও ভাইব্রেশনসহ নামাজের অ্যালার্ম');
+
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
-        'dainik_amol_alarms_v2',
-        'দৈনিক আমল অ্যালার্ম',
-        channelDescription: 'শব্দ ও ভাইব্রেশনসহ নামাজের অ্যালার্ম',
+        channelId,
+        channelName,
+        channelDescription: channelDescription,
         importance: Importance.max,
         priority: Priority.max,
         playSound: true,
@@ -283,6 +295,7 @@ class NotificationService {
     await initialize();
 
     final prefs = await SharedPreferences.getInstance();
+    final language = prefs.getString('app_lang') ?? 'bn';
     final amals = await AmalService.getAllAmals();
 
     await _cancelAllAmalReminders();
@@ -371,7 +384,13 @@ class NotificationService {
                 dayOffset,
                 index,
               ),
-              title: amal.titleBn,
+              title: language == 'ar'
+                  ? (amal.titleAr.isNotEmpty
+                      ? amal.titleAr
+                      : (amal.titleEn.isNotEmpty ? amal.titleEn : amal.titleBn))
+                  : (language == 'en'
+                      ? (amal.titleEn.isNotEmpty ? amal.titleEn : amal.titleBn)
+                      : amal.titleBn),
               payload: 'amal:${amal.id}:${_dateKey(date)}',
             ));
           }
@@ -394,7 +413,11 @@ class NotificationService {
       await scheduleAlarm(
         id: reminder.id,
         title: reminder.title,
-        body: 'এখন আমলটি সম্পন্ন করার সময়। আমল শেষ হলে তালিকায় টিক দিন।',
+        body: language == 'ar'
+            ? 'حان وقت أداء هذا العمل. ضع علامة عليه في القائمة بعد الانتهاء.'
+            : (language == 'en'
+                ? 'It is time to complete this amal. Tick it in the list when finished.'
+                : 'এখন আমলটি সম্পন্ন করার সময়। আমল শেষ হলে তালিকায় টিক দিন।'),
         dateTime: reminder.dateTime,
         payload: reminder.payload,
       );

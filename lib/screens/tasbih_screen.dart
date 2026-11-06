@@ -6,13 +6,21 @@ import '../models/history_service.dart';
 
 class TasbihScreen extends StatefulWidget {
   final bool isBn;
-  const TasbihScreen({super.key, required this.isBn});
+  final String language;
+  const TasbihScreen({
+    super.key,
+    required this.isBn,
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<TasbihScreen> createState() => _TasbihScreenState();
 }
 
 class _TasbihScreenState extends State<TasbihScreen> {
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
   int _sessionCounter = 0;
   int _targetGoal = 33;
   String _selectedZikr = 'সুবহানাল্লাহ — سُبْحَانَ اللَّهِ';
@@ -117,9 +125,14 @@ class _TasbihScreenState extends State<TasbihScreen> {
             SnackBar(
               backgroundColor: const Color(0xFF0D5C3A),
               content: Text(
-                widget.isBn
-                    ? 'মাশাআল্লাহ! $_targetGoal বার পাঠ পূর্ণ হয়েছে।'
-                    : 'Alhamdulillah! $_targetGoal counts completed.',
+                _t(
+                  'মাশাআল্লাহ! $_targetGoal বার পাঠ পূর্ণ হয়েছে।',
+                  'Alhamdulillah! $_targetGoal counts completed.',
+                  'ما شاء الله! اكتمل العدد $_targetGoal مرة.',
+                ),
+                textDirection: widget.language == 'ar'
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               duration: const Duration(seconds: 2),
@@ -142,9 +155,12 @@ class _TasbihScreenState extends State<TasbihScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.isBn
-                ? 'বর্তমান রাউন্ড রিসেট হয়েছে। আজকের মোট হিসাব সুরক্ষিত আছে।'
-                : 'Round reset. Today\'s total is preserved.',
+            _t('বর্তমান রাউন্ড রিসেট হয়েছে। আজকের মোট হিসাব সুরক্ষিত আছে।',
+            'Round reset. Today\'s total is preserved.',
+            'تم تصفير الجولة الحالية، مع الحفاظ على إجمالي عدد اليوم.'),
+            textDirection: widget.language == 'ar'
+                ? TextDirection.rtl
+                : TextDirection.ltr,
           ),
           duration: const Duration(seconds: 1),
         ),
@@ -167,15 +183,26 @@ class _TasbihScreenState extends State<TasbihScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          widget.isBn ? 'লক্ষ্যমাত্রা নির্ধারণ করুন' : 'Set Target Goal',
+          _t('লক্ষ্যমাত্রা নির্ধারণ করুন', 'Set Target Goal', 'تحديد الهدف'),
+          textDirection: widget.language == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr,
         ),
         content: TextField(
+          textDirection: widget.language == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr,
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: widget.isBn
-                ? 'যেমন: ৩৩, ৩৪, ১০০ বা ৫০০'
-                : 'e.g. 33, 34, 100 or 500',
+            hintText: _t(
+              'যেমন: ৩৩, ৩৪, ১০০ বা ৫০০',
+              'e.g. 33, 34, 100 or 500',
+              'مثال: ٣٣، ٣٤، ١٠٠ أو ٥٠٠',
+            ),
+            hintTextDirection: widget.language == 'ar'
+                ? TextDirection.rtl
+                : TextDirection.ltr,
             border: const OutlineInputBorder(),
           ),
         ),
@@ -185,7 +212,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
               await _selectGoal(0);
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: Text(widget.isBn ? 'সীমাহীন' : 'Unlimited'),
+            child: Text(_t('সীমাহীন', 'Unlimited', 'بلا حد')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -199,7 +226,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
               }
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: Text(widget.isBn ? 'সেভ' : 'Save'),
+            child: Text(_t('সেভ', 'Save', 'حفظ')),
           ),
         ],
       ),
@@ -237,16 +264,24 @@ class _TasbihScreenState extends State<TasbihScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.isBn ? 'ডিজিটাল জিকির কাউন্টার' : 'Tasbih Counter',
+          _t('ডিজিটাল জিকির কাউন্টার', 'Tasbih Counter', 'عداد التسبيح الرقمي'),
+          textDirection: widget.language == 'ar'
+              ? TextDirection.rtl
+              : TextDirection.ltr,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF0D5C3A),
-        foregroundColor: Colors.white,
+        backgroundColor: isDark
+            ? const Color(0xFF18221D)
+            : const Color(0xFF0D5C3A),
+        foregroundColor: isDark
+            ? const Color(0xFF80D6A8)
+            : Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Card(
+            color: isDark ? const Color(0xFF1E2923) : null,
             elevation: 2,
             child: Padding(
               padding: const EdgeInsets.symmetric(
@@ -262,10 +297,14 @@ class _TasbihScreenState extends State<TasbihScreen> {
                         (z) => DropdownMenuItem(
                           value: z,
                           child: Text(
-                            z,
-                            style: const TextStyle(
+                            (widget.language == 'ar' ? z.split('—').last.trim() : z),
+                            textDirection: widget.language == 'ar'
+                                ? TextDirection.rtl
+                                : TextDirection.ltr,
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
+                              color: isDark ? Colors.white : null,
                             ),
                           ),
                         ),
@@ -281,27 +320,42 @@ class _TasbihScreenState extends State<TasbihScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                widget.isBn ? 'লক্ষ্যমাত্রা: ' : 'Goal: ',
+                _t('লক্ষ্যমাত্রা: ', 'Goal: ', 'الهدف: '),
+                textDirection: widget.language == 'ar'
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               ActionChip(
-                label: const Text('৩৩'),
+                label: Text('৩৩', style: TextStyle(
+                  color: isDark ? Colors.white : null,
+                )),
                 backgroundColor:
-                    _targetGoal == 33 ? Colors.green.shade100 : null,
+                    _targetGoal == 33
+                        ? (isDark ? const Color(0xFF28533C) : Colors.green.shade100)
+                        : null,
                 onPressed: () => _selectGoal(33),
               ),
               const SizedBox(width: 6),
               ActionChip(
-                label: const Text('৩৪'),
+                label: Text('৩৪', style: TextStyle(
+                  color: isDark ? Colors.white : null,
+                )),
                 backgroundColor:
-                    _targetGoal == 34 ? Colors.green.shade100 : null,
+                    _targetGoal == 34
+                        ? (isDark ? const Color(0xFF28533C) : Colors.green.shade100)
+                        : null,
                 onPressed: () => _selectGoal(34),
               ),
               const SizedBox(width: 6),
               ActionChip(
-                label: const Text('১০০'),
+                label: Text('১০০', style: TextStyle(
+                  color: isDark ? Colors.white : null,
+                )),
                 backgroundColor:
-                    _targetGoal == 100 ? Colors.green.shade100 : null,
+                    _targetGoal == 100
+                        ? (isDark ? const Color(0xFF28533C) : Colors.green.shade100)
+                        : null,
                 onPressed: () => _selectGoal(100),
               ),
               const SizedBox(width: 6),
@@ -310,13 +364,14 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 label: Text(
                   _targetGoal > 0
                       ? '$_targetGoal'
-                      : (widget.isBn ? 'সীমাহীন' : 'Free'),
+                      : _t('সীমাহীন', 'Free', 'بلا حد'),
+                  style: TextStyle(color: isDark ? Colors.white : null),
                 ),
                 onPressed: _showSetGoalDialog,
               ),
             ],
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 40),
           Center(
             child: GestureDetector(
               onTap: _increment,
@@ -353,8 +408,11 @@ class _TasbihScreenState extends State<TasbihScreen> {
                       ),
                       Text(
                         _targetGoal > 0
-                            ? '${widget.isBn ? "লক্ষ্য" : "Goal"}: $_targetGoal'
-                            : (widget.isBn ? 'চাপ দিন' : 'Tap'),
+                            ? '${_t("লক্ষ্য", "Goal", "الهدف")}: $_targetGoal'
+                            : _t('চাপ দিন', 'Tap', 'اضغط'),
+                        textDirection: widget.language == 'ar'
+                            ? TextDirection.rtl
+                            : TextDirection.ltr,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -372,7 +430,7 @@ class _TasbihScreenState extends State<TasbihScreen> {
               onPressed: _resetSession,
               icon: const Icon(Icons.refresh, color: Colors.red),
               label: Text(
-                widget.isBn ? 'রিসেট' : 'Reset',
+                _t('রিসেট', 'Reset', 'إعادة ضبط'),
                 style: const TextStyle(
                   color: Colors.red,
                   fontSize: 14,
@@ -380,11 +438,17 @@ class _TasbihScreenState extends State<TasbihScreen> {
               ),
             ),
           ),
-          const Divider(height: 30),
+          Divider(
+            height: 30,
+            color: isDark ? Colors.white24 : null,
+          ),
           Text(
-            widget.isBn
-                ? 'আজকের মোট জিকির (সংরক্ষিত হিসাব):'
-                : 'Today\'s Total Zikr Counts:',
+            _t('আজকের মোট জিকির (সংরক্ষিত হিসাব):',
+                'Today\'s Total Zikr Counts:',
+                'إجمالي أذكار اليوم (السجل المحفوظ):'),
+            textDirection: widget.language == 'ar'
+                ? TextDirection.rtl
+                : TextDirection.ltr,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -394,21 +458,28 @@ class _TasbihScreenState extends State<TasbihScreen> {
           ...zikrPresets.map((z) {
             final totalToday = _todayTotals[z] ?? 0;
             return Card(
+              color: isDark ? const Color(0xFF1E2923) : null,
               margin: const EdgeInsets.symmetric(vertical: 3),
               child: ListTile(
                 dense: true,
                 title: Text(
-                  z,
+                  (widget.language == 'ar' ? z.split('—').last.trim() : z),
+                  textDirection: widget.language == 'ar'
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
                 ),
                 trailing: Text(
-                  '$totalToday ${widget.isBn ? "বার" : "times"}',
-                  style: const TextStyle(
+                  '$totalToday ${_t("বার", "times", "مرة")}',
+                  textDirection: widget.language == 'ar'
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF0D5C3A),
+                    color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A),
                     fontSize: 14,
                   ),
                 ),

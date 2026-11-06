@@ -45,9 +45,22 @@ class BanglaDateHelper {
 
 class HijriService {
   // মাগরিবের সময় অনুযায়ী হিজরি তারিখ পরিবর্তন
-  static String getHijriDate(DateTime dt, [bool isBn = true, DateTime? maghribTime]) {
+  static String _toArabicNum(int number) {
+    const digits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    return number.toString().split('').map((d) {
+      final n = int.tryParse(d);
+      return n == null ? d : digits[n];
+    }).join();
+  }
+
+  static String getHijriDate(
+    DateTime dt, [
+    bool isBn = true,
+    DateTime? maghribTime,
+    String language = '',
+  ]) {
     DateTime calcDt = dt;
-    // মাগরিবের ওয়াক্ত শুরু হলে পরের দিনের আরবি তারিখ শুরু হবে
+    // মাগরিবের ওয়াক্ত শুরু হলে পরের দিনের হিজরি তারিখ শুরু হবে
     if (maghribTime != null && !dt.isBefore(maghribTime)) {
       calcDt = dt.add(const Duration(days: 1));
     }
@@ -55,16 +68,20 @@ class HijriService {
     final h = HijriCalendar.fromDate(calcDt);
     final bnMonths = ['মহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি', 'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান', 'রমাদান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'];
     final enMonths = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Sha'ban", "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"];
-    int mIdx = (h.hMonth - 1).clamp(0, 11);
+    final arMonths = ['مُحَرَّم', 'صَفَر', 'رَبِيع الأَوَّل', 'رَبِيع الثَّانِي', 'جُمَادَى الأُولَى', 'جُمَادَى الآخِرَة', 'رَجَب', 'شَعْبَان', 'رَمَضَان', 'شَوَّال', 'ذُو القَعْدَة', 'ذُو الحِجَّة'];
+    final mIdx = (h.hMonth - 1).clamp(0, 11);
 
-    if (isBn) {
+    if (language == 'ar') {
+      return '${_toArabicNum(h.hDay)} ${arMonths[mIdx]}، ${_toArabicNum(h.hYear)} هـ';
+    } else if (isBn) {
       return '${BanglaDateHelper.toBanglaNum(h.hDay)} ${bnMonths[mIdx]}, ${BanglaDateHelper.toBanglaNum(h.hYear)} হিজরি';
     } else {
       return '${h.hDay} ${enMonths[mIdx]}, ${h.hYear} AH';
     }
   }
 
-  static String getHijriNote([bool isBn = true]) {
+  static String getHijriNote([bool isBn = true, String language = '']) {
+    if (language == 'ar') return 'يخضع لرؤية الهلال';
     return isBn ? 'চাঁদ দেখার উপর নির্ভরশীল' : 'Subject to moon sighting';
   }
 }
@@ -73,6 +90,8 @@ class AmalItem {
   final String id;
   final String titleBn;
   final String titleEn;
+  final String titleAr;
+  final String categoryAr;
   final String categoryBn;
   final String categoryEn;
   final bool isFard;
@@ -83,6 +102,8 @@ class AmalItem {
     required this.id,
     required this.titleBn,
     required this.titleEn,
+    this.titleAr = '',
+    this.categoryAr = '',
     String? categoryBn,
     String? categoryEn,
     String? category,
@@ -98,6 +119,8 @@ class AmalItem {
     'id': id,
     'titleBn': titleBn,
     'titleEn': titleEn,
+    'titleAr': titleAr,
+    'categoryAr': categoryAr,
     'categoryBn': categoryBn,
     'categoryEn': categoryEn,
     'isFard': isFard,
@@ -109,6 +132,8 @@ class AmalItem {
     id: json['id'],
     titleBn: json['titleBn'],
     titleEn: json['titleEn'],
+    titleAr: json['titleAr'] ?? '',
+    categoryAr: json['categoryAr'] ?? '',
     categoryBn: json['categoryBn'],
     categoryEn: json['categoryEn'],
     isFard: json['isFard'] ?? false,
@@ -119,27 +144,27 @@ class AmalItem {
 
 class AmalService {
   static final List<AmalItem> defaultAmals = [
-    AmalItem(id: 'tahajjud_4', titleBn: 'তাহাজ্জুদ নামাজ (৪ রাকাত)', titleEn: 'Tahajjud (4 Rak\'ah)', categoryBn: 'তাহাজ্জুদ', categoryEn: 'Tahajjud', isFard: false, prayerName: 'tahajjud'),
-    AmalItem(id: 'fajr_sunnah', titleBn: 'ফজর ২ রাকাত সুন্নত', titleEn: 'Fajr 2 Sunnah', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: false, prayerName: 'fajr'),
-    AmalItem(id: 'fajr_fard', titleBn: 'ফজর ২ রাকাত ফরজ (জামাতে)', titleEn: 'Fajr 2 Fard (Jama\'ah)', categoryBn: 'ফজর', categoryEn: 'Fajr', isFard: true, prayerName: 'fajr'),
-    AmalItem(id: 'surah_yasin', titleBn: 'সূরা ইয়াসিন তিলাওয়াত', titleEn: 'Surah Yasin', categoryBn: 'ফজর পরবর্তী', categoryEn: 'Post-Fajr', isFard: false, prayerName: 'post_fajr'),
-    AmalItem(id: 'morning_adhkar', titleBn: 'সকালবেলার জিকির ও আজকার', titleEn: 'Morning Adhkar', categoryBn: 'সকালবেলার আমল', categoryEn: 'Morning', isFard: false, prayerName: 'post_fajr'),
-    AmalItem(id: 'quran_2_pages', titleBn: 'দৈনিক কুরআন তিলাওয়াত (২ পৃষ্ঠা)', titleEn: 'Daily Quran (2 Pages)', categoryBn: 'ইশরাক পরবর্তী', categoryEn: 'Post-Ishraq', isFard: false, prayerName: 'ishraq'),
-    AmalItem(id: 'muhasabah', titleBn: 'দিনের কাজের মুহাসাবা / হিসাব', titleEn: 'Daily Self-Evaluation', categoryBn: 'রাতের আমল', categoryEn: 'Night', isFard: false, prayerName: 'muhasabah'),
-    AmalItem(id: 'ishraq', titleBn: 'ইশরাক নামাজ (৪ রাকাত)', titleEn: 'Ishraq Prayer', categoryBn: 'ইশরাক', categoryEn: 'Ishraq', isFard: false, prayerName: 'ishraq'),
-    AmalItem(id: 'dhuhr_sunnah_pre', titleBn: 'যোহরের পূর্ববর্তী ৪ সুন্নত', titleEn: 'Dhuhr 4 Pre-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_fard', titleBn: 'যোহরের ৪ রাকাত ফরজ', titleEn: 'Dhuhr 4 Fard', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: true, prayerName: 'dhuhr'),
-    AmalItem(id: 'dhuhr_sunnah_post', titleBn: 'যোহরের পরবর্তী ২ সুন্নত', titleEn: 'Dhuhr 2 Post-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', isFard: false, prayerName: 'dhuhr'),
-    AmalItem(id: 'asr_fard', titleBn: 'আসরের ৪ রাকাত ফরজ', titleEn: 'Asr 4 Fard', categoryBn: 'আসর', categoryEn: 'Asr', isFard: true, prayerName: 'asr'),
-    AmalItem(id: 'evening_dhikr', titleBn: 'বিকেলের জিকির ও আজকার', titleEn: 'Evening Adhkar', categoryBn: 'আসর পরবর্তী', categoryEn: 'Post-Asr', isFard: false, prayerName: 'asr'),
-    AmalItem(id: 'maghrib_fard', titleBn: 'মাগরিবের ৩ রাকাত ফরজ', titleEn: 'Maghrib 3 Fard', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: true, prayerName: 'maghrib'),
-    AmalItem(id: 'maghrib_sunnah', titleBn: 'মাগরিবের ২ রাকাত সুন্নত', titleEn: 'Maghrib 2 Sunnah', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'awwabin', titleBn: 'আওয়াবিন নামাজ', titleEn: 'Awwabin Prayer', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'surah_waqiah', titleBn: 'সূরা ওয়াকিয়াহ তিলাওয়াত', titleEn: 'Surah Waqiah', categoryBn: 'মাগরিব পরবর্তী', categoryEn: 'Post-Maghrib', isFard: false, prayerName: 'maghrib'),
-    AmalItem(id: 'isha_fard', titleBn: 'ইশার ৪ রাকাত ফরজ', titleEn: 'Isha 4 Fard', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'isha_sunnah', titleBn: 'ইশার ২ রাকাত সুন্নত', titleEn: 'Isha 2 Sunnah', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: false, prayerName: 'isha'),
-    AmalItem(id: 'isha_witr', titleBn: '৩ রাকাত বিতর', titleEn: '3 Rak\'ah Witr', categoryBn: 'ইশা', categoryEn: 'Isha', isFard: true, prayerName: 'isha'),
-    AmalItem(id: 'surah_mulk', titleBn: 'সূরা মুলক তিলাওয়াত', titleEn: 'Surah Mulk', categoryBn: 'ঘুমানোর পূর্বে', categoryEn: 'Bedtime', isFard: false, prayerName: 'bedtime'),
+    AmalItem(id: 'tahajjud_4', titleBn: 'তাহাজ্জুদ নামাজ (৪ রাকাত)', titleEn: 'Tahajjud (4 Rak\'ah)', categoryBn: 'তাহাজ্জুদ', categoryEn: 'Tahajjud', titleAr: 'صلاة التهجد (٤ ركعات)', categoryAr: 'التهجد', isFard: false, prayerName: 'tahajjud'),
+    AmalItem(id: 'fajr_sunnah', titleBn: 'ফজর ২ রাকাত সুন্নত', titleEn: 'Fajr 2 Sunnah', categoryBn: 'ফজর', categoryEn: 'Fajr', titleAr: 'سنة الفجر ركعتان', categoryAr: 'الفجر', isFard: false, prayerName: 'fajr'),
+    AmalItem(id: 'fajr_fard', titleBn: 'ফজর ২ রাকাত ফরজ (জামাতে)', titleEn: 'Fajr 2 Fard (Jama\'ah)', categoryBn: 'ফজর', categoryEn: 'Fajr', titleAr: 'فرض الفجر ركعتان (جماعة)', categoryAr: 'الفجر', isFard: true, prayerName: 'fajr'),
+    AmalItem(id: 'surah_yasin', titleBn: 'সূরা ইয়াসিন তিলাওয়াত', titleEn: 'Surah Yasin', categoryBn: 'ফজর পরবর্তী', categoryEn: 'Post-Fajr', titleAr: 'قراءة سورة يس', categoryAr: 'بعد الفجر', isFard: false, prayerName: 'post_fajr'),
+    AmalItem(id: 'morning_adhkar', titleBn: 'সকালবেলার জিকির ও আজকার', titleEn: 'Morning Adhkar', categoryBn: 'সকালবেলার আমল', categoryEn: 'Morning', titleAr: 'أذكار الصباح', categoryAr: 'أذكار الصباح', isFard: false, prayerName: 'post_fajr'),
+    AmalItem(id: 'quran_2_pages', titleBn: 'দৈনিক কুরআন তিলাওয়াত (২ পৃষ্ঠা)', titleEn: 'Daily Quran (2 Pages)', categoryBn: 'ইশরাক পরবর্তী', categoryEn: 'Post-Ishraq', titleAr: 'تلاوة القرآن يومياً (صفحتان)', categoryAr: 'بعد الإشراق', isFard: false, prayerName: 'ishraq'),
+    AmalItem(id: 'muhasabah', titleBn: 'দিনের কাজের মুহাসাবা / হিসাব', titleEn: 'Daily Self-Evaluation', categoryBn: 'রাতের আমল', categoryEn: 'Night', titleAr: 'محاسبة النفس اليومية', categoryAr: 'أعمال الليل', isFard: false, prayerName: 'muhasabah'),
+    AmalItem(id: 'ishraq', titleBn: 'ইশরাক নামাজ (৪ রাকাত)', titleEn: 'Ishraq Prayer', categoryBn: 'ইশরাক', categoryEn: 'Ishraq', titleAr: 'صلاة الإشراق (٤ ركعات)', categoryAr: 'الإشراق', isFard: false, prayerName: 'ishraq'),
+    AmalItem(id: 'dhuhr_sunnah_pre', titleBn: 'যোহরের পূর্ববর্তী ৪ সুন্নত', titleEn: 'Dhuhr 4 Pre-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', titleAr: 'سنة الظهر القبلية أربع ركعات', categoryAr: 'الظهر', isFard: false, prayerName: 'dhuhr'),
+    AmalItem(id: 'dhuhr_fard', titleBn: 'যোহরের ৪ রাকাত ফরজ', titleEn: 'Dhuhr 4 Fard', categoryBn: 'যোহর', categoryEn: 'Dhuhr', titleAr: 'فرض الظهر أربع ركعات', categoryAr: 'الظهر', isFard: true, prayerName: 'dhuhr'),
+    AmalItem(id: 'dhuhr_sunnah_post', titleBn: 'যোহরের পরবর্তী ২ সুন্নত', titleEn: 'Dhuhr 2 Post-Sunnah', categoryBn: 'যোহর', categoryEn: 'Dhuhr', titleAr: 'سنة الظهر البعدية ركعتان', categoryAr: 'الظهر', isFard: false, prayerName: 'dhuhr'),
+    AmalItem(id: 'asr_fard', titleBn: 'আসরের ৪ রাকাত ফরজ', titleEn: 'Asr 4 Fard', categoryBn: 'আসর', categoryEn: 'Asr', titleAr: 'فرض العصر أربع ركعات', categoryAr: 'العصر', isFard: true, prayerName: 'asr'),
+    AmalItem(id: 'evening_dhikr', titleBn: 'বিকেলের জিকির ও আজকার', titleEn: 'Evening Adhkar', categoryBn: 'আসর পরবর্তী', categoryEn: 'Post-Asr', titleAr: 'أذكار المساء', categoryAr: 'بعد العصر', isFard: false, prayerName: 'asr'),
+    AmalItem(id: 'maghrib_fard', titleBn: 'মাগরিবের ৩ রাকাত ফরজ', titleEn: 'Maghrib 3 Fard', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', titleAr: 'فرض المغرب ثلاث ركعات', categoryAr: 'المغرب', isFard: true, prayerName: 'maghrib'),
+    AmalItem(id: 'maghrib_sunnah', titleBn: 'মাগরিবের ২ রাকাত সুন্নত', titleEn: 'Maghrib 2 Sunnah', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', titleAr: 'سنة المغرب ركعتان', categoryAr: 'المغرب', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'awwabin', titleBn: 'আওয়াবিন নামাজ', titleEn: 'Awwabin Prayer', categoryBn: 'মাগরিব', categoryEn: 'Maghrib', titleAr: 'صلاة الأوابين', categoryAr: 'المغرب', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'surah_waqiah', titleBn: 'সূরা ওয়াকিয়াহ তিলাওয়াত', titleEn: 'Surah Waqiah', categoryBn: 'মাগরিব পরবর্তী', categoryEn: 'Post-Maghrib', titleAr: 'قراءة سورة الواقعة', categoryAr: 'بعد المغرب', isFard: false, prayerName: 'maghrib'),
+    AmalItem(id: 'isha_fard', titleBn: 'ইশার ৪ রাকাত ফরজ', titleEn: 'Isha 4 Fard', categoryBn: 'ইশা', categoryEn: 'Isha', titleAr: 'فرض العشاء أربع ركعات', categoryAr: 'العشاء', isFard: true, prayerName: 'isha'),
+    AmalItem(id: 'isha_sunnah', titleBn: 'ইশার ২ রাকাত সুন্নত', titleEn: 'Isha 2 Sunnah', categoryBn: 'ইশা', categoryEn: 'Isha', titleAr: 'سنة العشاء ركعتان', categoryAr: 'العشاء', isFard: false, prayerName: 'isha'),
+    AmalItem(id: 'isha_witr', titleBn: '৩ রাকাত বিতর', titleEn: '3 Rak\'ah Witr', categoryBn: 'ইশা', categoryEn: 'Isha', titleAr: 'صلاة الوتر ثلاث ركعات', categoryAr: 'العشاء', isFard: true, prayerName: 'isha'),
+    AmalItem(id: 'surah_mulk', titleBn: 'সূরা মুলক তিলাওয়াত', titleEn: 'Surah Mulk', categoryBn: 'ঘুমানোর পূর্বে', categoryEn: 'Bedtime', titleAr: 'قراءة سورة الملك', categoryAr: 'قبل النوم', isFard: false, prayerName: 'bedtime'),
   ];
 
   static Future<List<AmalItem>> getAllAmals() async {

@@ -13,12 +13,14 @@ import 'summary_screen.dart';
 class HomeScreen extends StatefulWidget {
   final bool isBn;
   final String madhab;
+  final String language;
 
   const HomeScreen({
     super.key,
     required this.isBn,
     required this.madhab,
-  });
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -271,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final timeText = DateFormat(
         'hh:mm:ss a',
-        widget.isBn ? 'bn' : 'en',
+        widget.language,
       ).format(now);
 
       String countdown = '';
@@ -324,18 +326,21 @@ class _HomeScreenState extends State<HomeScreen> {
           {
             'bn': 'সূর্যোদয়ের',
             'en': 'Sunrise',
+            'ar': 'الشروق',
             'start': sunrise,
             'end': sunrise.add(const Duration(minutes: 15)),
           },
           {
             'bn': 'যাওয়ালের',
             'en': 'Zawal',
+            'ar': 'الزوال',
             'start': dhuhr.subtract(const Duration(minutes: 5)),
             'end': dhuhr,
           },
           {
             'bn': 'সূর্যাস্তের',
             'en': 'Sunset',
+            'ar': 'الغروب',
             'start': maghrib.subtract(const Duration(minutes: 15)),
             'end': maghrib,
           },
@@ -347,48 +352,36 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!now.isBefore(start) && now.isBefore(end)) {
             isMakruh = true;
             countdownTarget = end;
-            waqtLabel = widget.isBn
-                ? '${period['bn']} মাকরুহ ওয়াক্ত শেষ হতে বাকি'
-                : '${period['en']} makruh time ends in';
+            waqtLabel = _t(
+              '${period['bn']} মাকরুহ ওয়াক্ত শেষ হতে বাকি',
+              '${period['en']} makruh time ends in',
+              'ينتهي وقت الكراهة بعد ${period['ar']}',
+            );
             break;
           }
         }
 
         if (!isMakruh) {
           if (now.isBefore(fajr)) {
-            waqtLabel = widget.isBn
-                ? 'ফজর শুরু হতে বাকি'
-                : 'Fajr begins in';
+            waqtLabel = _t('ফজর শুরু হতে বাকি', 'Fajr begins in', 'يبدأ الفجر بعد');
             countdownTarget = fajr;
           } else if (now.isBefore(sunrise)) {
-            waqtLabel = widget.isBn
-                ? 'ফজরের ওয়াক্ত বাকি আছে'
-                : 'Fajr time remaining';
+            waqtLabel = _t('ফজরের ওয়াক্ত বাকি আছে', 'Fajr time remaining', 'الوقت المتبقي للفجر');
             countdownTarget = sunrise;
           } else if (now.isBefore(dhuhr.subtract(const Duration(minutes: 5)))) {
-            waqtLabel = widget.isBn
-                ? 'যোহরের ওয়াক্ত শুরু হতে বাকি'
-                : 'Dhuhr begins in';
+            waqtLabel = _t('যোহরের ওয়াক্ত শুরু হতে বাকি', 'Dhuhr begins in', 'يبدأ الظهر بعد');
             countdownTarget = dhuhr;
           } else if (now.isBefore(asr)) {
-            waqtLabel = widget.isBn
-                ? 'যোহরের ওয়াক্ত বাকি আছে'
-                : 'Dhuhr time remaining';
+            waqtLabel = _t('যোহরের ওয়াক্ত বাকি আছে', 'Dhuhr time remaining', 'الوقت المتبقي للظهر');
             countdownTarget = asr;
           } else if (now.isBefore(maghrib.subtract(const Duration(minutes: 15)))) {
-            waqtLabel = widget.isBn
-                ? 'আসরের ওয়াক্ত বাকি আছে'
-                : 'Asr time remaining';
+            waqtLabel = _t('আসরের ওয়াক্ত বাকি আছে', 'Asr time remaining', 'الوقت المتبقي للعصر');
             countdownTarget = maghrib;
           } else if (now.isBefore(isha)) {
-            waqtLabel = widget.isBn
-                ? 'মাগরিবের ওয়াক্ত বাকি আছে'
-                : 'Maghrib time remaining';
+            waqtLabel = _t('মাগরিবের ওয়াক্ত বাকি আছে', 'Maghrib time remaining', 'الوقت المتبقي للمغرب');
             countdownTarget = isha;
           } else {
-            waqtLabel = widget.isBn
-                ? 'ইশার ওয়াক্ত বাকি আছে'
-                : 'Isha time remaining';
+            waqtLabel = _t('ইশার ওয়াক্ত বাকি আছে', 'Isha time remaining', 'الوقت المتبقي للعشاء');
           }
         }
 
@@ -416,19 +409,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getPrayerName(String name) {
-    if (!widget.isBn) return name;
-
     switch (name) {
       case 'Fajr':
-        return 'ফজর';
+        return _t('ফজর', 'Fajr', 'الفجر');
       case 'Dhuhr':
-        return 'যোহর';
+        return _t('যোহর', 'Dhuhr', 'الظهر');
       case 'Asr':
-        return 'আসর';
+        return _t('আসর', 'Asr', 'العصر');
       case 'Maghrib':
-        return 'মাগরিব';
+        return _t('মাগরিব', 'Maghrib', 'المغرب');
       case 'Isha':
-        return 'ইশা';
+        return _t('ইশা', 'Isha', 'العشاء');
       default:
         return name;
     }
@@ -437,7 +428,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<AmalItem> _getRunningAmols() {
     if (prayerTimes == null) {
       return _currentAmals
-          .where((amal) => _enabledAmols[amal.id] == true)
+          .where((amal) =>
+              _enabledAmols[amal.id] == true &&
+              _amolStatus[amal.id] != true)
           .toList();
     }
 
@@ -480,6 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return _currentAmals
         .where((amal) =>
             _enabledAmols[amal.id] == true &&
+            _amolStatus[amal.id] != true &&
             isRunning(amal.prayerName))
         .toList();
   }
@@ -504,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isBn ? 'নামাজের সময়সূচি' : 'Prayer Times',
+              _t('নামাজের সময়সূচি', 'Prayer Times', 'مواقيت الصلاة'),
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -520,9 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             const SizedBox(height: 12),
             if (prayerData.isEmpty)
-              Text(widget.isBn
-                  ? 'নামাজের সময় লোড হচ্ছে...'
-                  : 'Loading prayer times...')
+              Text(_t('নামাজের সময় লোড হচ্ছে...', 'Loading prayer times...', 'جارٍ تحميل مواقيت الصلاة...'))
             else
               ...prayerData.map((prayer) {
                 final time = prayer['time'] as DateTime;
@@ -535,7 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   trailing: Text(
                     DateFormat(
                       'hh:mm a',
-                      widget.isBn ? 'bn' : 'en',
+                      widget.language,
                     ).format(time),
                     style: TextStyle(
                       fontWeight:
@@ -550,15 +542,11 @@ class _HomeScreenState extends State<HomeScreen> {
             if (prayerTimes != null) ...[
               const Divider(),
               Text(
-                widget.isBn
-                    ? 'পরবর্তী ওয়াক্ত: ${_getPrayerName(_nextPrayerName)}'
-                    : 'Next prayer: $_nextPrayerName',
+                _t('পরবর্তী ওয়াক্ত: ${_getPrayerName(_nextPrayerName)}', 'Next prayer: ${_getPrayerName(_nextPrayerName)}', 'الصلاة القادمة: ${_getPrayerName(_nextPrayerName)}'),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
-                widget.isBn
-                    ? 'সময় বাকি: $_countdown'
-                    : 'Time remaining: $_countdown',
+                _t('সময় বাকি: $_countdown', 'Time remaining: $_countdown', 'الوقت المتبقي: $_countdown'),
               ),
             ],
           ],
@@ -569,15 +557,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAmolCard(AmalItem amal) {
     final completed = _amolStatus[amal.id] ?? false;
-    final title = widget.isBn ? amal.titleBn : amal.titleEn;
+    final title = _amalTitle(amal);
 
     return Card(
       child: CheckboxListTile(
         value: completed,
         onChanged: (_) => _toggleAmolFromHome(amal.id),
-        title: Text(title),
+        title: Text(title, textDirection: _textDirection),
         subtitle: Text(
-          widget.isBn ? amal.categoryBn : amal.categoryEn,
+          _amalCategory(amal),
         ),
         secondary: Icon(
           amal.isFard ? Icons.star : Icons.check_circle_outline,
@@ -591,10 +579,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final gregorian = DateFormat(
       'EEEE, d MMMM yyyy',
-      widget.isBn ? 'bn' : 'en',
+      widget.language,
     ).format(now);
 
-    final hijri = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib);
+    final hijri = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language);
     final bangla = BanglaDateHelper.format(now, sunriseTime: prayerTimes?.sunrise);
 
     return Card(
@@ -609,7 +597,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 6),
             Text(hijri),
             const SizedBox(height: 4),
-            Text(bangla),
+            if (widget.language == 'bn') Text(bangla),
           ],
         ),
       ),
@@ -621,24 +609,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     List<AmalItem> runningAmols = _getRunningAmols();
 
-    String hijriDate = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib);
-    String hijriNote = HijriService.getHijriNote(widget.isBn);
+    String hijriDate = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language);
+    String hijriNote = HijriService.getHijriNote(widget.isBn, widget.language);
     String banglaDate = BanglaDateHelper.format(now, sunriseTime: prayerTimes?.sunrise);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'দৈনন্দিন আমল' : 'Dainik Amal', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('দৈনন্দিন আমল', 'Dainik Amal', 'الأعمال اليومية'), style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
-            tooltip: widget.isBn ? 'আমল রিপোর্ট' : 'Summary Report',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SummaryScreen(isBn: widget.isBn))),
+            tooltip: _t('আমল রিপোর্ট', 'Summary Report', 'ملخص الأعمال'),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SummaryScreen(isBn: widget.isBn, language: widget.language))),
           ),
           IconButton(
             icon: const Icon(Icons.alarm),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn, coords: _coords, calculationMethod: CalculationMethod.karachi, madhab: widget.madhab))),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn, language: widget.language, coords: _coords, calculationMethod: CalculationMethod.karachi, madhab: widget.madhab))),
           ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: () { _initTimes(); _loadAllData(); }),
         ],
@@ -660,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
-                        Text(DateFormat('EEEE, d MMMM yyyy').format(now), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.lightBlueAccent : Colors.blue)),
+                        Text(DateFormat('EEEE, d MMMM yyyy', widget.language).format(now), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.lightBlueAccent : Colors.blue)),
                       ],
                     ),
                   ),
@@ -694,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.wb_sunny_outlined, size: 18, color: Colors.deepOrange),
-                        Text(banglaDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
+                        if (widget.language == 'bn') Text(banglaDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
                       ],
                     ),
                   ),
@@ -733,14 +721,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.bolt, color: Colors.green, size: 22),
                       const SizedBox(width: 6),
-                      Text(widget.isBn ? 'বর্তমান সময়ের সক্রিয় আমল (Running)' : 'Active Amals (Running)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
+                      Text(_t('বর্তমান সময়ের সক্রিয় আমল (চলমান)', 'Active Amals (Running)', 'الأعمال النشطة الآن'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
                     ],
                   ),
                   const Divider(height: 16),
                   if (runningAmols.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(widget.isBn ? 'এই মুহূর্তে কোনো নির্দিষ্ট ওয়াক্তের আমল রানিং নেই।' : 'No active amals at this moment.', style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                      child: Text(_t('এই মুহূর্তে কোনো নির্দিষ্ট ওয়াক্তের আমল চলমান নেই।', 'No active amals at this moment.', 'لا توجد أعمال مرتبطة بوقت الصلاة الآن'), style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                     )
                   else
                     ...runningAmols.map((a) {
@@ -749,20 +737,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         leading: Icon(a.isFard ? Icons.star_rounded : Icons.check_circle_outline, color: a.isFard ? Colors.deepOrange : const Color(0xFF0D5C3A)),
-                        title: Text(widget.isBn ? a.titleBn : a.titleEn, style: TextStyle(fontWeight: FontWeight.bold, decoration: isDone ? TextDecoration.lineThrough : null)),
-                        subtitle: Text(widget.isBn ? a.categoryBn : a.categoryEn, style: const TextStyle(fontSize: 12)),
+                        title: Text(_amalTitle(a), textDirection: _textDirection, style: TextStyle(fontWeight: FontWeight.bold, decoration: isDone ? TextDecoration.lineThrough : null)),
+                        subtitle: Text(_amalCategory(a), textDirection: _textDirection, style: const TextStyle(fontSize: 12)),
                         trailing: isDone
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(widget.isBn ? 'সম্পন্ন ' : 'Done ', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text(_t('সম্পন্ন ', 'Done ', 'مكتمل '), style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
                                   const Icon(Icons.lock, color: Colors.green, size: 16),
                                 ],
                               )
                             : ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4)),
                                 onPressed: () => _toggleAmolFromHome(a.id),
-                                child: Text(widget.isBn ? 'টিক দিন' : 'Check'),
+                                child: Text(_t('টিক দিন', 'Check', 'تم')),
                               ),
                       );
                     }),
@@ -816,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        widget.isBn ? 'পরবর্তী নামাজ' : 'Next Prayer',
+                        _t('পরবর্তী নামাজ', 'Next Prayer', 'الصلاة القادمة'),
                         style: TextStyle(
                           color: _isMakruhTime
                               ? (isDark ? Colors.red.shade100 : Colors.red.shade900)
@@ -850,30 +838,30 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(widget.isBn ? 'নামাজের সময়' : 'Prayer Times', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
+                        Text(_t('নামাজের সময়', 'Prayer Times', 'مواقيت الصلاة'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF0D5C3A))),
                         InkWell(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn, coords: _coords, calculationMethod: CalculationMethod.karachi, madhab: widget.madhab))),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlarmScreen(isBn: widget.isBn, language: widget.language, coords: _coords, calculationMethod: CalculationMethod.karachi, madhab: widget.madhab))),
                           child: const Row(
                             children: [
                               Icon(Icons.alarm_on, size: 18, color: Color(0xFF0D5C3A)),
                               SizedBox(width: 4),
-                              Text('অ্যালার্ম', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                              Text(_t('অ্যালার্ম', 'Alarm', 'التنبيه'), textDirection: _textDirection, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                             ],
                           ),
                         ),
                       ],
                     ),
                     const Divider(height: 18),
-                    _timeRow(widget.isBn ? 'সাহরীর শেষ সময়' : 'Suhoor Ends', prayerTimes!.fajr.subtract(const Duration(minutes: 10))),
-                    _timeRow(widget.isBn ? 'ফজর' : 'Fajr', prayerTimes!.fajr),
-                    _timeRow(widget.isBn ? 'সূর্যোদয়' : 'Sunrise', prayerTimes!.sunrise),
-                    _timeRow(widget.isBn ? 'যোহর' : 'Dhuhr', prayerTimes!.dhuhr),
-                    _timeRow(widget.isBn ? 'আসর' : 'Asr', prayerTimes!.asr),
-                    _timeRow(widget.isBn ? 'সূর্যাস্ত ও মাগরিব' : 'Sunset & Maghrib', prayerTimes!.maghrib),
-                    _timeRow(widget.isBn ? 'ইশা' : 'Isha', prayerTimes!.isha),
+                    _timeRow(_t('সাহরীর শেষ সময়', 'Suhoor Ends', 'نهاية السحور'), prayerTimes!.fajr.subtract(const Duration(minutes: 10))),
+                    _timeRow(_t('ফজর', 'Fajr', 'الفجر'), prayerTimes!.fajr),
+                    _timeRow(_t('সূর্যোদয়', 'Sunrise', 'الشروق'), prayerTimes!.sunrise),
+                    _timeRow(_t('যোহর', 'Dhuhr', 'الظهر'), prayerTimes!.dhuhr),
+                    _timeRow(_t('আসর', 'Asr', 'العصر'), prayerTimes!.asr),
+                    _timeRow(_t('সূর্যাস্ত ও মাগরিব', 'Sunset & Maghrib', 'الغروب والمغرب'), prayerTimes!.maghrib),
+                    _timeRow(_t('ইশা', 'Isha', 'العشاء'), prayerTimes!.isha),
                     const Divider(height: 20),
                     Text(
-                      widget.isBn ? 'মাকরুহ ওয়াক্ত' : 'Makruh Times',
+                      _t('মাকরুহ ওয়াক্ত', 'Makruh Times', 'أوقات الكراهة'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     _timeRangeRow(
@@ -882,7 +870,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       prayerTimes!.sunrise.add(const Duration(minutes: 15)),
                     ),
                     _timeRangeRow(
-                      widget.isBn ? 'যাওয়াল (সতর্কতামূলক)' : 'Zawal (precaution)',
+                      _t('যাওয়াল (সতর্কতামূলক)', 'Zawal (precaution)', 'وقت الزوال (احتياطًا)'),
                       prayerTimes!.dhuhr.subtract(const Duration(minutes: 5)),
                       prayerTimes!.dhuhr,
                     ),
@@ -913,6 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             title,
+            textDirection: _textDirection,
             style: TextStyle(
               fontSize: 13,
               color: color,
@@ -920,7 +909,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           Text(
-            '${DateFormat('hh:mm a').format(start)} - ${DateFormat('hh:mm a').format(end)}',
+            '${DateFormat('hh:mm a', widget.language).format(start)} - ${DateFormat('hh:mm a', widget.language).format(end)}',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 12,
@@ -938,8 +927,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 14)),
-          Text(DateFormat('hh:mm a').format(time), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(title, textDirection: _textDirection, style: const TextStyle(fontSize: 14)),
+          Text(DateFormat('hh:mm a', widget.language).format(time), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         ],
       ),
     );

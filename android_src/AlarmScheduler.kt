@@ -48,6 +48,32 @@ object AlarmScheduler {
             .apply()
     }
 
+    fun updateLanguage(context: Context, language: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = prefs.getStringSet(IDS, emptySet())?.toList() ?: emptyList()
+        val now = System.currentTimeMillis()
+
+        for (value in ids) {
+            val id = value.toIntOrNull() ?: continue
+            val time = prefs.getLong("time_$id", 0L)
+            if (time <= now) continue
+
+            val slot = id % 10
+            val title = when (slot) {
+                0 -> if (language == "ar") "منبه التهجد (قبل الفجر)" else if (language == "en") "Tahajjud Alarm (Before Fajr)" else "তাহাজ্জুদ অ্যালার্ম (ফজরের পূর্বে)"
+                1 -> if (language == "ar") "منبه صلاة الفجر" else if (language == "en") "Fajr Prayer Alarm" else "ফজরের নামাজ অ্যালার্ম"
+                3 -> if (language == "ar") "منبه صلاة الظهر" else if (language == "en") "Dhuhr Prayer Alarm" else "যোহরের নামাজ অ্যালার্ম"
+                4 -> if (language == "ar") "منبه صلاة العصر" else if (language == "en") "Asr Prayer Alarm" else "আসরের নামাজ অ্যালার্ম"
+                5 -> if (language == "ar") "منبه صلاة المغرب" else if (language == "en") "Maghrib Prayer Alarm" else "মাগরিবের নামাজ অ্যালার্ম"
+                6 -> if (language == "ar") "منبه صلاة العشاء" else if (language == "en") "Isha Prayer Alarm" else "ইশার নামাজ অ্যালার্ম"
+                else -> continue
+            }
+
+            prefs.edit().putString("title_$id", title).apply()
+            schedulePendingIntent(context, id, title, time)
+        }
+    }
+
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val ids = prefs.getStringSet(IDS, emptySet())?.toList() ?: emptyList()

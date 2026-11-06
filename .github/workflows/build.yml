@@ -44,6 +44,12 @@ jobs:
           print("Native alarm Kotlin files installed in", package)
           PYTHON
 
+      - name: Ensure AndroidX
+        run: |
+          mkdir -p android
+          touch android/gradle.properties
+          grep -q '^android.useAndroidX=true$' android/gradle.properties || echo 'android.useAndroidX=true' >> android/gradle.properties
+
       - name: Configure Android Desugaring and NDK
         run: |
           python3 - <<'PYTHON'

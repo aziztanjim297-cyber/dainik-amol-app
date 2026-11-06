@@ -10,13 +10,22 @@ import '../models/helpers.dart';
 
 class SummaryScreen extends StatefulWidget {
   final bool isBn;
-  const SummaryScreen({super.key, required this.isBn});
+  final String language;
+  const SummaryScreen({
+    super.key,
+    required this.isBn,
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<SummaryScreen> createState() => _SummaryScreenState();
 }
 
 class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProviderStateMixin {
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
+
   late TabController _tabController;
   final GlobalKey _reportCardKey = GlobalKey();
   final GlobalKey _weeklyCardKey = GlobalKey();
@@ -99,7 +108,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
           SnackBar(
             backgroundColor: const Color(0xFF0D5C3A),
             content: Text(widget.isBn
-                ? 'ছবি Download ফোল্ডারে সেভ হয়েছে!'
+                ? 'تم حفظ الصورة في مجلد التنزيلات!'
                 : 'Image saved to Download folder!'),
           ),
         );
@@ -107,7 +116,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ছবি সেভ করতে ব্যর্থ: $e')),
+          SnackBar(content: Text(_t('ছবি সেভ করতে ব্যর্থ: $e', 'Failed to save image: $e', 'فشل حفظ الصورة: $e'))),
         );
       }
     }
@@ -146,7 +155,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
           SnackBar(
             backgroundColor: const Color(0xFF0D5C3A),
             content: Text(widget.isBn
-                ? 'PDF Download ফোল্ডারে সেভ হয়েছে!'
+                ? 'تم حفظ ملف PDF في مجلد التنزيلات!'
                 : 'PDF saved to Download folder!'),
           ),
         );
@@ -154,7 +163,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF সেভ করতে ব্যর্থ: $e')),
+          SnackBar(content: Text(_t('PDF সেভ করতে ব্যর্থ: $e', 'Failed to save PDF: $e', 'فشل حفظ ملف PDF: $e'))),
         );
       }
     }
@@ -164,9 +173,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return Directionality(
+      textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? 'আমল ও জিকির সামারি' : 'Amal & Zikr Summary', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('আমল ও জিকির সামারি', 'Amal & Zikr Summary', 'ملخص الأعمال والأذكار'), style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -175,9 +186,9 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
           unselectedLabelColor: Colors.white70,
           indicatorColor: Colors.amberAccent,
           tabs: [
-            Tab(text: widget.isBn ? 'দৈনিক' : 'Daily'),
-            Tab(text: widget.isBn ? 'সাপ্তাহিক' : 'Weekly'),
-            Tab(text: widget.isBn ? 'মাসিক' : 'Monthly'),
+            Tab(text: _t('দৈনিক', 'Daily', 'يومي')),
+            Tab(text: _t('সাপ্তাহিক', 'Weekly', 'أسبوعي')),
+            Tab(text: _t('মাসিক', 'Monthly', 'شهري')),
           ],
         ),
       ),
@@ -187,10 +198,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               controller: _tabController,
               children: [
                 _buildDailyTab(isDark),
-                _buildStatsTab(_weeklyStats, widget.isBn ? 'বিগত ৭ দিনের সার্বিক অগ্রগতি' : 'Past 7 Days Summary', isDark),
-                _buildStatsTab(_monthlyStats, widget.isBn ? 'বিগত ৩০ দিনের সার্বিক অগ্রগতি' : 'Past 30 Days Summary', isDark),
+                _buildStatsTab(_weeklyStats, _t('বিগত ৭ দিনের সার্বিক অগ্রগতি', 'Past 7 Days Summary', 'ملخص آخر ٧ أيام'), isDark),
+                _buildStatsTab(_monthlyStats, _t('বিগত ৩০ দিনের সার্বিক অগ্রগতি', 'Past 30 Days Summary', 'ملخص آخر ٣٠ يوماً'), isDark),
               ],
             ),
+    ),
     );
   }
 
@@ -207,7 +219,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '${widget.isBn ? "তারিখ" : "Date"}: ${DateFormat('d MMMM yyyy').format(_selectedDate)}',
+              '${_t('তারিখ', 'Date', 'التاريخ')}: ${DateFormat('d MMMM yyyy', widget.language).format(_selectedDate)}',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             IconButton(
@@ -215,7 +227,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                 backgroundColor: const Color(0xFF0D5C3A),
                 foregroundColor: Colors.white,
               ),
-              tooltip: widget.isBn ? 'তারিখ নির্বাচন' : 'Select date',
+              tooltip: _t('তারিখ নির্বাচন', 'Select date', 'اختر التاريخ'),
               icon: const Icon(Icons.calendar_month, size: 20),
               onPressed: () async {
                 DateTime? picked = await showDatePicker(
@@ -223,6 +235,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   initialDate: _selectedDate,
                   firstDate: DateTime.now().subtract(const Duration(days: 90)),
                   lastDate: DateTime.now(),
+                  locale: Locale(widget.language),
                 );
                 if (picked != null) {
                   setState(() => _selectedDate = picked);
@@ -250,20 +263,20 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                     children: [
                       const Icon(Icons.verified, color: Color(0xFF0D5C3A), size: 24),
                       const SizedBox(width: 8),
-                      Text(widget.isBn ? 'দৈনন্দিন আমল ও জিকির রিপোর্ট' : 'Amal & Zikr Report', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                      Text(_t('দৈনন্দিন আমল ও জিকির রিপোর্ট', 'Amal & Zikr Report', 'تقرير الأعمال والأذكار اليومية'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(DateFormat('EEEE, d MMMM yyyy').format(_selectedDate), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                  Text(DateFormat('EEEE, d MMMM yyyy', widget.language).format(_selectedDate), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                   const Divider(height: 20),
 
                   // আমলের অগ্রগতি
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _metricBox(widget.isBn ? 'মোট আমল' : 'Total', '$total', Colors.blue),
-                      _metricBox(widget.isBn ? 'সম্পন্ন' : 'Done', '$done', Colors.green),
-                      _metricBox(widget.isBn ? 'অগ্রগতি' : 'Rate', '$percent%', Colors.deepOrange),
+                      _metricBox(_t('মোট আমল', 'Total', 'إجمالي الأعمال'), '$total', Colors.blue),
+                      _metricBox(_t('সম্পন্ন', 'Done', 'مكتمل'), '$done', Colors.green),
+                      _metricBox(_t('অগ্রগতি', 'Rate', 'التقدم'), '$percent%', Colors.deepOrange),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -271,11 +284,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   // জিকিরের সারসংক্ষেপ
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(widget.isBn ? 'জিকিরের পরিসংখ্যান:' : 'Zikr Statistics:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    child: Text(_t('জিকিরের পরিসংখ্যান:', 'Zikr Statistics:', 'إحصائيات الأذكار:'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   const SizedBox(height: 8),
                   if (_dailyRecord?.zikrCounts == null || _dailyRecord!.zikrCounts.isEmpty)
-                    Text(widget.isBn ? 'এই তারিখে কোনো জিকিরের হিসাব নেই।' : 'No zikr record on this day.', style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                    Text(_t('এই তারিখে কোনো জিকিরের হিসাব নেই।', 'No zikr record on this day.', 'لا توجد أذكار مسجلة في هذا اليوم.'), style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
                   else
                     ..._dailyRecord!.zikrCounts.entries.map((e) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -283,7 +296,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(e.key.split('—')[0].trim(), style: const TextStyle(fontWeight: FontWeight.w500)),
-                          Text('${e.value} বার', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                          Text('${e.value} ${_t('বার', 'times', 'مرة')}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                         ],
                       ),
                     )),
@@ -301,7 +314,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                 icon: const Icon(Icons.image, size: 18),
-                label: Text(widget.isBn ? 'ছবি সেভ করুন' : 'Save Image'),
+                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة')),
                 onPressed: _saveAsImage,
               ),
             ),
@@ -310,7 +323,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0D5C3A), padding: const EdgeInsets.symmetric(vertical: 12)),
                 icon: const Icon(Icons.picture_as_pdf, size: 18),
-                label: Text(widget.isBn ? 'PDF সেভ করুন' : 'Save PDF'),
+                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF')),
                 onPressed: _saveAsPdf,
               ),
             ),
@@ -333,7 +346,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
       padding: const EdgeInsets.all(16),
       children: [
         RepaintBoundary(
-          key: title.contains('৭ দিনের') || title.contains('7 Days')
+          key: identical(stats, _weeklyStats)
               ? _weeklyCardKey
               : _monthlyCardKey,
           child: Card(
@@ -382,7 +395,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                         ? 'মোট পঠিত জিকির'
                         : 'Total Zikr Counts'),
                     trailing: Text(
-                      '$totalZikr বার',
+                      '$totalZikr ${_t('বার', 'times', 'مرة')}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -392,7 +405,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   ),
                   const Divider(height: 24),
                   Text(
-                    widget.isBn ? 'জিকিরভিত্তিক হিসাব' : 'Zikr Breakdown',
+                    _t('জিকিরভিত্তিক হিসাব', 'Zikr Breakdown', 'تفصيل الأذكار'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -403,7 +416,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   if (zikrCounts.isEmpty)
                     Text(
                       widget.isBn
-                          ? 'এ সময়ে কোনো জিকিরের হিসাব নেই'
+                          ? 'لا توجد أذكار مسجلة خلال هذه الفترة'
                           : 'No zikr recorded for this period',
                       style: TextStyle(color: Colors.grey[600]),
                     )
@@ -419,7 +432,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                         ),
                         title: Text(entry.key.split('—')[0].trim()),
                         trailing: Text(
-                          '${entry.value} ${widget.isBn ? 'বার' : 'times'}',
+                          '${entry.value} ${_t('বার', 'times', 'مرة')}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0D5C3A),
@@ -443,7 +456,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.image, size: 18),
-                label: Text(widget.isBn ? 'ছবি সেভ করুন' : 'Save Image'),
+                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة')),
                 onPressed: _saveAsImage,
               ),
             ),
@@ -455,7 +468,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.picture_as_pdf, size: 18),
-                label: Text(widget.isBn ? 'PDF সেভ করুন' : 'Save PDF'),
+                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF')),
                 onPressed: _saveAsPdf,
               ),
             ),

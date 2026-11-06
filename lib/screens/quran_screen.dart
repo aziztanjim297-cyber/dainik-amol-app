@@ -8,15 +8,21 @@ import '../models/quran_data.dart';
 
 class QuranScreen extends StatefulWidget {
   final bool isBn;
+  final String language;
 
-  const QuranScreen({super.key, required this.isBn});
+  const QuranScreen({
+    super.key,
+    required this.isBn,
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<QuranScreen> createState() => _QuranScreenState();
 }
 
 class _QuranScreenState extends State<QuranScreen> {
-  String _t(String bn, String en) => widget.isBn ? bn : en;
+  String _t(String bn, String en, [String? ar]) =>
+      widget.language == 'ar' ? (ar ?? en) : (widget.isBn ? bn : en);
   late PdfViewerController _pdfController;
   int _currentPage = 2;
   int _pageCount = 611;
@@ -53,7 +59,7 @@ class _QuranScreenState extends State<QuranScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _downloadError = _t('ফাইল প্রস্তুত করা যায়নি: $e', 'Could not prepare file: $e'));
+        setState(() => _downloadError = _t('ফাইল প্রস্তুত করা যায়নি: $e', 'Could not prepare file: $e', 'تعذّر تجهيز الملف: $e'));
       }
     }
   }
@@ -101,7 +107,7 @@ class _QuranScreenState extends State<QuranScreen> {
       sink = null;
 
       if (received < 1000) {
-        throw Exception(_t('ডাউনলোড অসম্পূর্ণ', 'Download incomplete'));
+        throw Exception(_t('ডাউনলোড অসম্পূর্ণ', 'Download incomplete', 'اكتمل التنزيل بشكل غير صحيح'));
       }
 
       final header = await target.openRead(0, 5).fold<List<int>>(
@@ -110,7 +116,7 @@ class _QuranScreenState extends State<QuranScreen> {
       );
 
       if (String.fromCharCodes(header) != '%PDF-') {
-        throw Exception(_t('বৈধ PDF পাওয়া যায়নি', 'Invalid PDF file'));
+        throw Exception(_t('বৈধ PDF পাওয়া যায়নি', 'Invalid PDF file', 'ملف PDF غير صالح'));
       }
 
       if (mounted) {
@@ -129,7 +135,7 @@ class _QuranScreenState extends State<QuranScreen> {
       if (mounted) {
         setState(() {
           _isDownloading = false;
-          _downloadError = _t('ডাউনলোড ব্যর্থ: $e', 'Download failed: $e');
+          _downloadError = _t('ডাউনলোড ব্যর্থ: $e', 'Download failed: $e', 'فشل التنزيل: $e');
         });
       }
     } finally {
@@ -151,7 +157,8 @@ class _QuranScreenState extends State<QuranScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _t('কুরআন শরীফ পড়তে প্রথমে ডাউনলোড করুন', 'Download the Quran to start reading'),
+              _t('কুরআন শরীফ পড়তে প্রথমে ডাউনলোড করুন', 'Download the Quran to start reading', 'حمّل القرآن الكريم لبدء القراءة'),
+              textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -159,7 +166,8 @@ class _QuranScreenState extends State<QuranScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Text(_t('ফাইলের আকার প্রায় ৪২ MB। একবার ডাউনলোড হলে অফলাইনে পড়তে পারবেন।', 'File size is about 42 MB. Once downloaded, you can read it offline.'),
+            Text(_t('ফাইলের আকার প্রায় ৪২ MB। একবার ডাউনলোড হলে অফলাইনে পড়তে পারবেন।', 'File size is about 42 MB. Once downloaded, you can read it offline.', 'حجم الملف حوالي ٤٢ ميغابايت. يمكنك قراءته دون اتصال بعد تنزيله.'),
+              textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -172,14 +180,14 @@ class _QuranScreenState extends State<QuranScreen> {
               const SizedBox(height: 8),
               Text(
                 _downloadProgress > 0
-                    ? '${(_downloadProgress * 100).toStringAsFixed(0)}% ${_t('ডাউনলোড হয়েছে', 'downloaded')}'
-                    : _t('ডাউনলোড হচ্ছে...', 'Downloading...'),
+                    ? '${(_downloadProgress * 100).toStringAsFixed(0)}% ${_t('ডাউনলোড হয়েছে', 'downloaded', 'تم التنزيل')}'
+                    : _t('ডাউনলোড হচ্ছে...', 'Downloading...', 'جارٍ التنزيل...'),
               ),
             ] else
               ElevatedButton.icon(
                 onPressed: _downloadPdf,
                 icon: const Icon(Icons.download),
-                label: Text(_t('কুরআন শরীফ ডাউনলোড করুন', 'Download Quran')),
+                label: Text(_t('কুরআন শরীফ ডাউনলোড করুন', 'Download Quran', 'تنزيل القرآن الكريم')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0D5C3A),
                   foregroundColor: Colors.white,
@@ -275,7 +283,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_t('সংরক্ষিত বুকমার্কসমূহ', 'Saved Bookmarks'),
+                    Text(_t('সংরক্ষিত বুকমার্কসমূহ', 'Saved Bookmarks', 'العلامات المرجعية المحفوظة'), textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -291,7 +299,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 const Divider(),
                 if (pages.isEmpty)
                   Expanded(
-                    child: Center(child: Text(_t('কোনো পৃষ্ঠা বুকমার্ক করা নেই', 'No bookmarked pages'))),
+                    child: Center(child: Text(_t('কোনো পৃষ্ঠা বুকমার্ক করা নেই', 'No bookmarked pages', 'لا توجد صفحات محفوظة'), textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr)),
                   )
                 else
                   Expanded(
@@ -305,7 +313,8 @@ class _QuranScreenState extends State<QuranScreen> {
                             color: Color(0xFF0D5C3A),
                           ),
                           title: Text(
-                            _t('পৃষ্ঠা নম্বর $page', 'Page $page'),
+                            _t('পৃষ্ঠা নম্বর $page', 'Page $page', 'الصفحة رقم $page'),
+                            textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           trailing: IconButton(
@@ -350,19 +359,19 @@ class _QuranScreenState extends State<QuranScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(_t('পৃষ্ঠা নম্বরে যান', 'Go to Page')),
+        title: Text(_t('পৃষ্ঠা নম্বরে যান', 'Go to Page', 'الانتقال إلى صفحة')),
         content: TextField(
           controller: c,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: _t('পৃষ্ঠা নম্বর লিখুন', 'Enter page number'),
+            hintText: _t('পৃষ্ঠা নম্বর লিখুন', 'Enter page number', 'أدخل رقم الصفحة'),
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(_t('বাতিল', 'Cancel')),
+            child: Text(_t('বাতিল', 'Cancel', 'إلغاء')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -374,7 +383,7 @@ class _QuranScreenState extends State<QuranScreen> {
               if (p != null) _jump(p);
               Navigator.pop(ctx);
             },
-            child: Text(_t('যান', 'Go')),
+            child: Text(_t('যান', 'Go', 'انتقال')),
           ),
         ],
       ),
@@ -391,8 +400,11 @@ class _QuranScreenState extends State<QuranScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final list = _surahs.where((s) {
-            return (widget.isBn ? s['name'] : s['nameEn'])
+            return (widget.language == 'ar'
+                        ? s['nameAr']
+                        : (widget.isBn ? s['name'] : s['nameEn']))
                     .toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                s['nameAr'].toString().contains(_searchQuery) ||
                 s['no'].toString() == _searchQuery;
           }).toList();
 
@@ -404,7 +416,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_t('১১৪টি সূরার সূচিপত্র', '114 Surah Index'),
+                    Text(_t('১১৪টি সূরার সূচিপত্র', '114 Surah Index', 'فهرس السور الـ١١٤'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -418,11 +430,12 @@ class _QuranScreenState extends State<QuranScreen> {
                   ],
                 ),
                 TextField(
+                    textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                   onChanged: (val) {
                     setModalState(() => _searchQuery = val);
                   },
                   decoration: InputDecoration(
-                    hintText: _t('সূরার নাম দিয়ে খুঁজুন...', 'Search Surah name...'),
+                    hintText: _t('সূরার নাম দিয়ে খুঁজুন...', 'Search Surah name...', 'ابحث عن اسم السورة...'),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -453,14 +466,22 @@ class _QuranScreenState extends State<QuranScreen> {
                             ),
                           ),
                         ),
-                        title: Text(
-                          widget.isBn ? '${s['name']}' : '${s['nameEn']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                        title: Directionality(
+                          textDirection: widget.language == 'ar'
+                              ? TextDirection.rtl
+                              : TextDirection.ltr,
+                          child: Text(
+                            widget.language == 'ar'
+                                ? '${s['nameAr']}'
+                                : (widget.isBn ? '${s['name']}' : '${s['nameEn']}'),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         trailing: Text(
-                          _t('পৃষ্ঠা ${s['page']}', 'Page ${s['page']}'),
+                          _t('পৃষ্ঠা ${s['page']}', 'Page ${s['page']}', 'الصفحة ${s['page']}'),
+                          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                           style: const TextStyle(
                             color: Colors.green,
                             fontWeight: FontWeight.bold,
@@ -490,7 +511,8 @@ class _QuranScreenState extends State<QuranScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _t('পবিত্র কুরআন', 'The Holy Quran'),
+          _t('পবিত্র কুরআন', 'The Holy Quran', 'القرآن الكريم'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF0D5C3A),
@@ -498,17 +520,17 @@ class _QuranScreenState extends State<QuranScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.list_alt),
-            tooltip: _t('সূচিপত্র', 'Surah Index'),
+            tooltip: _t('সূচিপত্র', 'Surah Index', 'فهرس السور'),
             onPressed: _showIndexSheet,
           ),
           IconButton(
             icon: const Icon(Icons.pin_invoke),
-            tooltip: _t('পৃষ্ঠায় যান', 'Go to Page'),
+            tooltip: _t('পৃষ্ঠায় যান', 'Go to Page', 'الانتقال إلى صفحة'),
             onPressed: _showJumpDialog,
           ),
           IconButton(
             icon: const Icon(Icons.bookmarks),
-            tooltip: _t('বুকমার্ক তালিকা', 'Bookmarks'),
+            tooltip: _t('বুকমার্ক তালিকা', 'Bookmarks', 'العلامات المرجعية'),
             onPressed: _showBookmarksSheet,
           ),
           IconButton(
@@ -516,7 +538,7 @@ class _QuranScreenState extends State<QuranScreen> {
               isBookmarked ? Icons.bookmark : Icons.bookmark_border,
               color: isBookmarked ? Colors.amberAccent : Colors.white,
             ),
-            tooltip: _t('বুকমার্ক', 'Bookmark'),
+            tooltip: _t('বুকমার্ক', 'Bookmark', 'إضافة علامة مرجعية'),
             onPressed: _toggleBookmark,
           ),
         ],
@@ -535,7 +557,8 @@ class _QuranScreenState extends State<QuranScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _t('পৃষ্ঠা: $_currentPage / $_pageCount', 'Page: $_currentPage / $_pageCount'),
+                  _t('পৃষ্ঠা: $_currentPage / $_pageCount', 'Page: $_currentPage / $_pageCount', 'الصفحة: $_currentPage / $_pageCount'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -596,7 +619,7 @@ class _QuranScreenState extends State<QuranScreen> {
                       ? () => _jump(_currentPage - 1)
                       : null,
                   icon: const Icon(Icons.arrow_back_ios, size: 14),
-                  label: Text(_t('আগের পৃষ্ঠা', 'Previous Page')),
+                  label: Text(_t('আগের পৃষ্ঠা', 'Previous Page', 'الصفحة السابقة'), textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                 ),
                 TextButton.icon(
                   onPressed: _showJumpDialog,
@@ -604,14 +627,14 @@ class _QuranScreenState extends State<QuranScreen> {
                     Icons.format_list_numbered,
                     size: 16,
                   ),
-                  label: Text(_t('পৃষ্ঠা পরিবর্তন', 'Go to Page')),
+                  label: Text(_t('পৃষ্ঠা পরিবর্তন', 'Go to Page', 'الانتقال إلى صفحة'), textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                 ),
                 TextButton.icon(
                   onPressed: _currentPage < _pageCount
                       ? () => _jump(_currentPage + 1)
                       : null,
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: Text(_t('পরের পৃষ্ঠা', 'Next Page')),
+                  label: Text(_t('পরের পৃষ্ঠা', 'Next Page', 'الصفحة التالية'), textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                 ),
               ],
             ),

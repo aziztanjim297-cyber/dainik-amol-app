@@ -4,18 +4,36 @@ import '../models/hadith_service.dart';
 
 class HadithScreen extends StatefulWidget {
   final bool isBn;
-  const HadithScreen({super.key, required this.isBn});
+  final String language;
+  const HadithScreen({
+    super.key,
+    required this.isBn,
+    String? language,
+  }) : language = language ?? (isBn ? 'bn' : 'en');
 
   @override
   State<HadithScreen> createState() => _HadithScreenState();
 }
 
 class _HadithScreenState extends State<HadithScreen> {
+  String _t(String bn, String en, String ar) =>
+      widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
+  TextDirection get _textDirection =>
+      widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+
   final List<Map<String, String>> _allHadiths = HadithService.getAllHadiths();
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  String? _expandedHadithNo;
   Set<String> _bookmarkedHadiths = {};
-  bool _showOnlyBookmarks = false;
   double _arabicFontSize = 21.0;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -50,12 +68,132 @@ class _HadithScreenState extends State<HadithScreen> {
     await prefs.setStringList('hadith_bookmarks_set', _bookmarkedHadiths.toList());
   }
 
+
+  void _showBookmarksSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF1E2923) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final bookmarks = _allHadiths
+              .where((h) => _bookmarkedHadiths.contains(h['no']))
+              .toList()
+            ..sort((a, b) =>
+                int.parse(a['no']!).compareTo(int.parse(b['no']!)));
+
+          return SizedBox(
+            height: MediaQuery.of(sheetContext).size.height * 0.55,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.bookmarks, color: Color(0xFF0D5C3A)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _t('সংরক্ষিত হাদিস', 'Bookmarked Hadiths', 'الأحاديث المحفوظة'),
+                            textDirection: _textDirection,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Text('${bookmarks.length}/40',
+                          style: const TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  Expanded(
+                    child: bookmarks.isEmpty
+                        ? Center(
+                            child: Text(
+                              _t('এখনো কোনো হাদিস বুকমার্ক করা হয়নি',
+                                  'No bookmarked hadiths yet',
+                                  'لا توجد أحاديث محفوظة حتى الآن'),
+                              textAlign: TextAlign.center,
+                                textDirection: _textDirection,
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: bookmarks.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (ctx, index) {
+                              final h = bookmarks[index];
+                              return ListTile(
+                                onTap: () {
+                                  setState(() {
+                                    _searchQuery = h['no']!;
+                                    _searchController.text = h['no']!;
+                                    _expandedHadithNo = h['no']!;
+                                  });
+                                  Navigator.pop(sheetContext);
+                                },
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                leading: CircleAvatar(
+                                  backgroundColor: const Color(0xFF0D5C3A),
+                                  foregroundColor: Colors.white,
+                                  child: Text(h['no']!),
+                                ),
+                                title: Text(
+                                  'হাদিস ${h['no']}: ${h['title']}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: Text(
+                                  h['bangla']!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: IconButton(
+                                  tooltip: _t('বুকমার্ক সরান', 'Remove bookmark', 'إزالة من المحفوظات'),
+                                  icon: const Icon(
+                                    Icons.bookmark_remove_outlined,
+                                    color: Colors.redAccent,
+                                  ),
+                                  onPressed: () async {
+                                    await _toggleBookmark(h['no']!);
+                                    if (sheetContext.mounted) {
+                                      setSheetState(() {});
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final filtered = _allHadiths.where((h) {
-      if (_showOnlyBookmarks && !_bookmarkedHadiths.contains(h['no'])) return false;
       String q = _searchQuery.toLowerCase();
       return h['no']!.contains(q) ||
           h['title']!.toLowerCase().contains(q) ||
@@ -65,25 +203,25 @@ class _HadithScreenState extends State<HadithScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isBn ? '৪০ হাদিস (শিক্ষা সহ)' : '40 Hadiths (Lessons)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('৪০ হাদিস', '40 Hadith', 'الأحاديث الأربعون'), textDirection: _textDirection, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         actions: [
           // ফন্ট সাইজ ছোট/বড় করার বাটন
           IconButton(
             icon: const Icon(Icons.text_decrease, size: 20),
-            tooltip: 'ফন্ট ছোট করুন',
+            tooltip: _t('ফন্ট ছোট করুন', 'Decrease font size', 'تصغير الخط'),
             onPressed: () => _updateFontSize(-1.5),
           ),
           IconButton(
             icon: const Icon(Icons.text_increase, size: 22),
-            tooltip: 'ফন্ট বড় করুন',
+            tooltip: _t('ফন্ট বড় করুন', 'Increase font size', 'تكبير الخط'),
             onPressed: () => _updateFontSize(1.5),
           ),
           IconButton(
-            icon: Icon(_showOnlyBookmarks ? Icons.bookmarks : Icons.bookmarks_outlined),
-            tooltip: widget.isBn ? 'সংরক্ষিত হাদিস' : 'Bookmarks',
-            onPressed: () => setState(() => _showOnlyBookmarks = !_showOnlyBookmarks),
+            icon: const Icon(Icons.bookmarks_outlined),
+            tooltip: _t('সংরক্ষিত হাদিস', 'Bookmarks', 'الأحاديث المحفوظة'),
+            onPressed: _showBookmarksSheet,
           ),
         ],
       ),
@@ -92,9 +230,15 @@ class _HadithScreenState extends State<HadithScreen> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
+              controller: _searchController,
+                textDirection: _textDirection,
+            onChanged: (val) => setState(() {
+              _searchQuery = val;
+              _expandedHadithNo = null;
+            }),
               decoration: InputDecoration(
-                hintText: widget.isBn ? 'হাদিস নম্বর বা বিষয় দিয়ে খুঁজুন...' : 'Search hadith...',
+                hintText: _t('হাদিস নম্বর বা বিষয় দিয়ে খুঁজুন...', 'Search hadith...', 'ابحث برقم الحديث أو موضوعه...'),
+                hintTextDirection: _textDirection,
                 prefixIcon: const Icon(Icons.search, color: Color(0xFF0D5C3A)),
                 suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear), onPressed: () => setState(() => _searchQuery = '')) : null,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -102,23 +246,9 @@ class _HadithScreenState extends State<HadithScreen> {
               ),
             ),
           ),
-
-          if (_showOnlyBookmarks)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: Colors.amber.shade100,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(widget.isBn ? 'কেবল বুকমার্ক করা হাদিস প্রদর্শিত হচ্ছে' : 'Showing bookmarks', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.brown)),
-                  TextButton(onPressed: () => setState(() => _showOnlyBookmarks = false), child: Text(widget.isBn ? 'সব দেখুন' : 'Show All')),
-                ],
-              ),
-            ),
-
-          Expanded(
+Expanded(
             child: filtered.isEmpty
-                ? Center(child: Text(widget.isBn ? 'কোনো হাদিস পাওয়া যায়নি' : 'No hadith found'))
+                ? Center(child: Text(_t('কোনো হাদিস পাওয়া যায়নি', 'No hadith found', 'لم يتم العثور على أحاديث'), textDirection: _textDirection))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     itemCount: filtered.length,
@@ -130,12 +260,22 @@ class _HadithScreenState extends State<HadithScreen> {
                         margin: const EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
                         child: ExpansionTile(
+                          key: PageStorageKey('hadith-${h['no']}'),
+                          initiallyExpanded: _expandedHadithNo == h['no'],
                           leading: CircleAvatar(
                             backgroundColor: const Color(0xFF0D5C3A),
                             foregroundColor: Colors.white,
                             child: Text(h['no']!, style: const TextStyle(fontWeight: FontWeight.bold)),
                           ),
-                          title: Text('হাদিস ${h['no']}: ${h['title']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          title: Text(
+                            _t(
+                              'হাদিস ${h['no']}: ${h['title']}',
+                              'Hadith ${h['no']}: ${h['title']}',
+                              'الحديث ${h['no']}: ${h['title']}',
+                            ),
+                            textDirection: _textDirection,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
                           subtitle: Text(h['bangla']!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           trailing: IconButton(
                             icon: Icon(isMarked ? Icons.bookmark : Icons.bookmark_border, color: isMarked ? Colors.amber.shade700 : Colors.grey),
@@ -180,7 +320,7 @@ class _HadithScreenState extends State<HadithScreen> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Expanded(child: Text('বর্ণনাকারী: ${h['narrator']}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey))),
+                                      Expanded(child: Text(_t('বর্ণনাকারী: ${h['narrator']}', 'Narrator: ${h['narrator']}', 'الراوي: ${h['narrator']}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey))),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
@@ -189,7 +329,7 @@ class _HadithScreenState extends State<HadithScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  Text('সূত্র: ${h['source']}', style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
+                                  Text(_t('সূত্র: ${h['source']}', 'Source: ${h['source']}', 'المصدر: ${h['source']}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
                                   const SizedBox(height: 12),
 
                                   // এআই শিক্ষা ও তাদাব্বুর
@@ -207,7 +347,7 @@ class _HadithScreenState extends State<HadithScreen> {
                                           children: [
                                             const Icon(Icons.lightbulb_outline, size: 18, color: Color(0xFF0D5C3A)),
                                             const SizedBox(width: 6),
-                                            Text(widget.isBn ? 'প্রাপ্ত শিক্ষা ও তাদাব্বুর:' : 'Lesson & Reflection:', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 13)),
+                                            Text(_t('প্রাপ্ত শিক্ষা ও তাদাব্বুর:', 'Lesson & Reflection:', 'الفوائد والتدبر:'), textDirection: _textDirection, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A), fontSize: 13)),
                                           ],
                                         ),
                                         const SizedBox(height: 6),
