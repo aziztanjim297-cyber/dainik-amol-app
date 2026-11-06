@@ -15,6 +15,16 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFF0D5C3A),
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF0D5C3A),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+
   await initializeDateFormatting('bn', null);
   runApp(const DainikAmolApp());
 
