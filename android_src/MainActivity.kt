@@ -39,8 +39,28 @@ class MainActivity : FlutterActivity() {
                     if (id == null || title == null || timestamp == null) {
                         result.error("INVALID_ARGS", "Alarm details missing", null)
                     } else {
-                        AlarmScheduler.schedule(this, id, title, timestamp)
-                        result.success(null)
+                        try {
+                            AlarmScheduler.schedule(this, id, title, timestamp)
+                            android.util.Log.i(
+                                "DainikAmolAlarm",
+                                "Scheduled alarm id=$id at $timestamp"
+                            )
+                            result.success(null)
+                        } catch (e: SecurityException) {
+                            android.util.Log.e("DainikAmolAlarm", "Exact alarm permission denied", e)
+                            result.error(
+                                "EXACT_ALARM_PERMISSION_DENIED",
+                                e.message ?: "Exact alarm permission is not granted",
+                                null
+                            )
+                        } catch (e: Exception) {
+                            android.util.Log.e("DainikAmolAlarm", "Alarm scheduling failed: id=$id", e)
+                            result.error(
+                                "ALARM_SCHEDULE_FAILED",
+                                e.message ?: "Android could not schedule this alarm",
+                                null
+                            )
+                        }
                     }
                 }
 

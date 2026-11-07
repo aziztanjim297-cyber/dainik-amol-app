@@ -94,16 +94,38 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: payload,
       );
-    } on PlatformException {
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledTime,
-        details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        payload: payload,
+      debugPrint(
+        'NOTIFICATION_EXACT_SCHEDULED id=$id time=$scheduledTime',
       );
+    } on PlatformException catch (e, st) {
+      debugPrint(
+        'NOTIFICATION_EXACT_FAILED id=$id code=${e.code} '
+        'message=${e.message} details=${e.details}\\n$st',
+      );
+
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledTime,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+        debugPrint(
+          'NOTIFICATION_INEXACT_SCHEDULED id=$id time=$scheduledTime',
+        );
+      } catch (fallbackError, fallbackStack) {
+        debugPrint(
+          'NOTIFICATION_INEXACT_FAILED id=$id error=$fallbackError\\n'
+          '$fallbackStack',
+        );
+        rethrow;
+      }
+    } catch (e, st) {
+      debugPrint('NOTIFICATION_SCHEDULE_FAILED id=$id error=$e\\n$st');
+      rethrow;
     }
   }
 
@@ -135,13 +157,29 @@ class NotificationService {
     required DateTime dateTime,
   }) async {
     if (!dateTime.isAfter(DateTime.now())) return;
+
     await initialize();
     await _plugin.cancel(id);
-    await _nativeAlarmChannel.invokeMethod<void>('scheduleAlarm', {
-      'id': id,
-      'title': title,
-      'timestamp': dateTime.millisecondsSinceEpoch,
-    });
+
+    try {
+      await _nativeAlarmChannel.invokeMethod<void>('scheduleAlarm', {
+        'id': id,
+        'title': title,
+        'timestamp': dateTime.millisecondsSinceEpoch,
+      });
+      debugPrint(
+        'PRAYER_ALARM_SCHEDULED id=$id title=$title time=$dateTime',
+      );
+    } on PlatformException catch (e, st) {
+      debugPrint(
+        'PRAYER_ALARM_FAILED id=$id code=${e.code} '
+        'message=${e.message} details=${e.details}\\n$st',
+      );
+      rethrow;
+    } catch (e, st) {
+      debugPrint('PRAYER_ALARM_FAILED id=$id error=$e\\n$st');
+      rethrow;
+    }
   }
 
   Future<void> cancelPrayerAlarm(int id) async {
@@ -408,19 +446,47 @@ class NotificationService {
 
     const maxScheduledAmalReminders = 400;
 
+    var scheduledCount = 0;
+    var failedCount = 0;
+
     for (final reminder
         in reminders.take(maxScheduledAmalReminders)) {
-      await scheduleAlarm(
-        id: reminder.id,
-        title: reminder.title,
-        body: language == 'ar'
-            ? 'حان وقت أداء هذا العمل. ضع علامة عليه في القائمة بعد الانتهاء.'
-            : (language == 'en'
-                ? 'It is time to complete this amal. Tick it in the list when finished.'
-                : 'এখন আমলটি সম্পন্ন করার সময়। আমল শেষ হলে তালিকায় টিক দিন।'),
-        dateTime: reminder.dateTime,
-        payload: reminder.payload,
-      );
+      try {
+        await scheduleAlarm(
+          id: reminder.id,
+          title: reminder.title,
+          body: language == 'ar'
+              ? 'حان وقت أداء هذا العمل. ضع علامة عليه في القائمة بعد الانتهاء.'
+              : (language == 'en'
+                  ? 'It is time to complete this amal. Tick it in the list when finished.'
+                  : 'এখন আমলটি সম্পন্ন করার সময়। আমল শেষ হলে তালিকায় টিক দিন।'),
+          dateTime: reminder.dateTime,
+          payload: reminder.payload,
+        );
+        scheduledCount++;
+      } catch (e, st) {
+        failedCount++;
+        debugPrint(
+          'AMAL_REMINDER_FAILED id=${reminder.id} '
+          'time=${reminder.dateTime} error=$e\\n$st',
+        );
+      }
+    }
+
+    debugPrint(
+      'AMAL_REMINDER_SUMMARY total=${reminders.length} '
+      'attempted=${reminders.take(maxScheduledAmalReminders).length} '
+      'scheduled=$scheduledCount failed=$failedCount',
+    );
+
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      final amalPending = pending.where(
+        (n) => n.id >= _amalIdStart && n.id < _amalIdEnd,
+      ).length;
+      debugPrint('AMAL_REMINDER_PENDING count=$amalPending');
+    } catch (e) {
+      debugPrint('AMAL_REMINDER_PENDING_CHECK_FAILED error=$e');
     }
   }
 

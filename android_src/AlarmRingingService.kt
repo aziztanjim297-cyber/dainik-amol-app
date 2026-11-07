@@ -39,6 +39,10 @@ class AlarmRingingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        android.util.Log.i(
+            "DainikAmolAlarm",
+            "RINGING_SERVICE_STARTED startId=$startId"
+        )
         val language = getLanguage()
         val defaultTitle = when (language) {
             "ar" -> "منبه الصلاة"
@@ -61,6 +65,11 @@ class AlarmRingingService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        android.util.Log.i(
+            "DainikAmolAlarm",
+            "RINGING_SERVICE_FOREGROUND_READY"
+        )
+
 
         startAlarmSound()
         startVibration()
@@ -156,7 +165,12 @@ class AlarmRingingService : Service() {
                 prepare()
                 start()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e(
+                "DainikAmolAlarm",
+                "ALARM_SOUND_START_FAILED",
+                e
+            )
             stopSound()
         }
     }

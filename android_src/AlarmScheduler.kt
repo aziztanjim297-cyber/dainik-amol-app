@@ -11,6 +11,12 @@ object AlarmScheduler {
     private const val IDS = "scheduled_ids"
 
     fun schedule(context: Context, id: Int, title: String, time: Long) {
+        if (time <= System.currentTimeMillis()) {
+            throw IllegalArgumentException("Alarm time must be in the future")
+        }
+
+        schedulePendingIntent(context, id, title, time)
+
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val ids = prefs.getStringSet(IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
         ids.add(id.toString())
@@ -19,7 +25,6 @@ object AlarmScheduler {
             .putLong("time_$id", time)
             .putString("title_$id", title)
             .apply()
-        schedulePendingIntent(context, id, title, time)
     }
 
     fun cancel(context: Context, id: Int) {
@@ -83,7 +88,11 @@ object AlarmScheduler {
             val time = prefs.getLong("time_$id", 0L)
             val title = prefs.getString("title_$id", "নামাজের অ্যালার্ম") ?: "নামাজের অ্যালার্ম"
             if (time > now) {
-                schedulePendingIntent(context, id, title, time)
+                try {
+                    schedulePendingIntent(context, id, title, time)
+                } catch (e: Exception) {
+                    android.util.Log.e("DainikAmolAlarm", "Restore failed for id=$id", e)
+                }
             } else {
                 markTriggered(context, id)
             }
@@ -91,19 +100,31 @@ object AlarmScheduler {
     }
 
     private fun schedulePendingIntent(context: Context, id: Int, title: String, time: Long) {
+        if (time <= System.currentTimeMillis()) {
+            throw IllegalArgumentException("Alarm time must be in the future")
+        }
+
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val pending = pendingIntent(context, id, title, time)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             !alarmManager.canScheduleExactAlarms()
         ) {
-            return
+            throw SecurityException("Exact alarm permission is not granted")
         }
 
-        alarmManager.setExactAndAllowWhileIdle(
-            AlarmManager.RTC_WAKEUP,
-            time,
-            pending
-        )
+        try {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                time,
+                pending
+            )
+        } catch (e: Exception) {
+            throw IllegalStateException(
+                "Android could not schedule alarm id=$id: ${e.message}",
+                e
+            )
+        }
     }
 
     private fun pendingIntent(context: Context, id: Int, title: String, time: Long): PendingIntent {

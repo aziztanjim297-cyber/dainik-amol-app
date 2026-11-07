@@ -243,6 +243,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
 
         if (alarmTime == null || !alarmTime.isAfter(now)) continue;
 
+        try {
         await service.schedulePrayerAlarm(
           id: notificationId,
           title: widget.language == 'ar'
@@ -250,6 +251,13 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
               : (widget.language == 'en' ? item['titleEn']! : item['titleBn']!),
           dateTime: alarmTime,
         );
+        } catch (e, st) {
+          debugPrint(
+            'PRAYER_ALARM_LOOP_FAILED id=$notificationId '
+            'prayer=$id date=$date error=$e\\n$st',
+          );
+          continue;
+        }
       }
     }
   }
@@ -379,6 +387,14 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
     final picked = await showTimePicker(
       context: context,
       initialTime: initial,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            alwaysUse24HourFormat: false,
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked == null) return;
     await _saveFixedAlarmTime(id, picked);
