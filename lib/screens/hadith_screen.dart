@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/hadith_service.dart';
 import '../models/hadith_arabic_data.dart';
 import '../models/hadith_english_data.dart';
+import '../models/hadith_english_lessons.dart';
 
 class HadithScreen extends StatefulWidget {
   final bool isBn;
@@ -76,8 +77,11 @@ class _HadithScreenState extends State<HadithScreen> {
 String _hadithGrade(Map<String, String> h) =>
       widget.isBn ? h['grade']! : (_arabicData(h)?['grade'] ?? '');
 
-String _hadithLesson(Map<String, String> h) =>
-      widget.isBn ? h['lesson']! : (_arabicData(h)?['lesson'] ?? '');
+String _hadithLesson(Map<String, String> h) {
+    if (widget.isBn) return h['lesson'] ?? '';
+    if (widget.language == 'ar') return _arabicData(h)?['lesson'] ?? '';
+    return hadithEnglishLessons[h['no']] ?? '';
+  }
 
   TextDirection get _textDirection =>
       widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
@@ -416,7 +420,7 @@ Expanded(
                                   const SizedBox(height: 12),
 
                                    // এআই শিক্ষা ও তাদাব্বুর
-                                  if (widget.isBn || widget.language == 'ar')
+                                  if (_hadithLesson(h).isNotEmpty)
                  Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
