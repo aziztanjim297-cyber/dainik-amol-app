@@ -48,6 +48,17 @@ class _HadithScreenState extends State<HadithScreen> {
     return h['bangla']!;
   }
 
+  String _hadithMeaning(Map<String, String> h) {
+    if (widget.language == 'ar') {
+      return _arabicData(h)?['meaning'] ?? '';
+    }
+    if (!widget.isBn) {
+      return _englishData(h)?['englishText'] ??
+          'English translation unavailable';
+    }
+    return h['bangla']!;
+  }
+
   String _hadithNarrator(Map<String, String> h) {
     if (widget.language == 'ar') {
       return _arabicData(h)?['narrator'] ?? '';
@@ -355,9 +366,9 @@ Expanded(
                                       border: Border.all(color: const Color(0xFF0D5C3A).withOpacity(0.2)),
                                     ),
                                     child: Directionality(
-                                      textDirection: _textDirection,
+                                      textDirection: ui.TextDirection.rtl,
                                       child: Text(
-                                        _hadithText(h),
+                                        h['arabic'] ?? '',
                                         textAlign: TextAlign.justify,
                                         style: TextStyle(
                                           fontSize: _arabicFontSize,
@@ -371,9 +382,18 @@ Expanded(
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // বাংলা অর্থ
-                                  if (widget.isBn)
-                                    Text(_hadithText(h), textDirection: _textDirection, style: const TextStyle(fontSize: 14.5, height: 1.6)),
+                                  // ভাষাভিত্তিক অর্থ ও অনুবাদ
+                                  Text(
+                                    _t('বাংলা অর্থ:', 'English translation:', 'المعنى والشرح:'),
+                                    textDirection: _textDirection,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    _hadithMeaning(h),
+                                    textDirection: _textDirection,
+                                    style: const TextStyle(fontSize: 14.5, height: 1.8),
+                                  ),
                                   const Divider(height: 22),
 
                                   // রাবি ও সূত্র

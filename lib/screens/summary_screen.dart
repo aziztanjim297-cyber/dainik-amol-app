@@ -429,7 +429,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   ),
                   const Divider(height: 24),
                   Text(
-                    _t('জিকিরভিত্তিক হিসাব', 'Zikr Breakdown', 'تفصيل الأذكار'),
+                    _t('জিকিরের পরিসংখ্যান:', 'Zikr Statistics:', 'إحصائيات الأذكار:'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
@@ -445,27 +445,19 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       style: TextStyle(color: Colors.grey[600]),
                     )
                   else
-                    ...zikrCounts.entries.map(
-                      (entry) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                        leading: const Icon(
-                          Icons.circle,
-                          size: 9,
-                          color: Color(0xFF0D5C3A),
-                        ),
-                        title: Text(_localizedZikrName(entry.key),
-          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
-                        trailing: Text(
-                          '${entry.value} ${_t('বার', 'times', 'مرة')}',
-          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D5C3A),
-                          ),
-                        ),
-                      ),
-                    ),
+                    ...zikrCounts.entries.map((entry) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 3),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(_localizedZikrName(entry.key),
+        textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
+      Text('${entry.value} ${_t('বার', 'times', 'مرة')}',
+        textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+    ],
+  ),
+)),
                 ],
               ),
             ),
