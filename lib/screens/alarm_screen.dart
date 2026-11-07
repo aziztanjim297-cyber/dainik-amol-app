@@ -342,7 +342,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
     final value = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(_t('কত মিনিট যোগ করবেন?', 'Add how many minutes?', 'كم دقيقة تريد إضافتها؟')),
+        title: Text(_t('কত মিনিট যোগ করবেন?', 'Add how many minutes?', 'كم دقيقة تريد إضافتها؟'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -353,7 +354,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(_t('বাতিল', 'Cancel', 'إلغاء')),
+            child: Text(_t('বাতিল', 'Cancel', 'إلغاء'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
           ),
           ElevatedButton(
             onPressed: () {
@@ -362,7 +364,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                 Navigator.pop(ctx, n);
               }
             },
-            child: Text(_t('সংরক্ষণ', 'Save', 'حفظ')),
+            child: Text(_t('সংরক্ষণ', 'Save', 'حفظ'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
           ),
         ],
       ),
@@ -393,7 +396,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
     SystemSound.play(SystemSoundType.alert);
     HapticFeedback.mediumImpact();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_t('সিস্টেম নোটিফিকেশন সাউন্ড ও ভাইব্রেশন সক্রিয়!', 'System alert tone triggered!', 'تم تشغيل صوت تنبيه النظام والاهتزاز!'))),
+      SnackBar(content: Text(_t('সিস্টেম নোটিফিকেশন সাউন্ড ও ভাইব্রেশন সক্রিয়!', 'System alert tone triggered!', 'تم تشغيل صوت تنبيه النظام والاهتزاز!'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr)),
     );
   }
 
@@ -408,11 +412,10 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: Text(_t('অ্যালার্ম ও নোটিফিকেশন', 'Alarms & Notifications', 'المنبهات والإشعارات'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('অ্যালার্ম ও নোটিফিকেশন', 'Alarms & Notifications', 'المنبهات والإشعارات'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
@@ -432,7 +435,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                     children: [
                       const Icon(Icons.security, color: Color(0xFF0D5C3A), size: 22),
                       const SizedBox(width: 8),
-                      Text(_t('সিস্টেম এক্সেস ও অ্যালার্ম টেস্ট', 'System Access & Test', 'صلاحيات النظام واختبار المنبه'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+                      Text(_t('সিস্টেম এক্সেস ও অ্যালার্ম টেস্ট', 'System Access & Test', 'صلاحيات النظام واختبار المنبه'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -440,12 +444,14 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                     widget.isBn
                         ? 'ওয়াক্ত অনুযায়ী সিস্টেম অ্যালার্ট ও ভাইব্রেশন নিশ্চিত করতে নিচের বাটন দিয়ে পরীক্ষা করুন।'
                         : 'Test system alert sound and hardware vibration for prayers.',
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                     style: const TextStyle(fontSize: 12, color: Colors.black87),
                   ),
                   if (_exactAlarmAllowed == false) ...[
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'নির্দিষ্ট সময়ে নামাজের অ্যালার্ম পেতে Exact Alarm অনুমতি চালু করুন।',
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                       style: TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.w600,
@@ -460,7 +466,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                               .openExactAlarmSettings();
                         },
                         icon: const Icon(Icons.settings),
-                        label: Text(_t('Exact Alarm অনুমতি চালু করুন', 'Enable Exact Alarm permission', 'تفعيل إذن المنبه الدقيق')),
+                        label: Text(_t('Exact Alarm অনুমতি চালু করুন', 'Enable Exact Alarm permission', 'تفعيل إذن المنبه الدقيق'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                       ),
                     ),
                   ],
@@ -471,7 +478,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white),
                           icon: const Icon(Icons.alarm, size: 18),
-                          label: Text(_t('অ্যালার্ম বাজান', 'Test Alarm', 'اختبار المنبه')),
+                          label: Text(_t('অ্যালার্ম বাজান', 'Test Alarm', 'اختبار المنبه'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                           onPressed: _playSystemAlarm,
                         ),
                       ),
@@ -480,7 +488,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0D5C3A)),
                           icon: const Icon(Icons.notifications_active, size: 18),
-                          label: Text(_t('নোটিফিকেশন', 'Test Tone', 'اختبار نغمة الإشعار')),
+                          label: Text(_t('নোটিফিকেশন', 'Test Tone', 'اختبار نغمة الإشعار'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                           onPressed: _playSystemNotification,
                         ),
                       ),
@@ -492,7 +501,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 16),
 
-          Text(_t('নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)', 'Prayer Alarms', 'منبهات الصلاة'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+          Text(_t('নামাজের পূর্ণাঙ্গ অ্যালার্ম (Alarm System)', 'Prayer Alarms', 'منبهات الصلاة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...prayerAlarms.map((a) {
             final id = a['id']!;
@@ -514,6 +524,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                       ),
                       title: Text(
                         widget.language == 'ar' ? (a['titleAr'] ?? a['titleEn']!) : (widget.isBn ? a['titleBn']! : a['titleEn']!),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       value: isSet,
@@ -529,6 +540,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                           children: [
                             Text(
                               _t('অ্যালার্মের সময় নির্ধারণ', 'Alarm time setting', 'إعداد وقت المنبه'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
@@ -541,15 +553,18 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                               items: [
                                 DropdownMenuItem(
                                   value: 'prayer',
-                                  child: Text(_t('ওয়াক্ত অনুযায়ী', 'Prayer time', 'حسب وقت الصلاة')),
+                                  child: Text(_t('ওয়াক্ত অনুযায়ী', 'Prayer time', 'حسب وقت الصلاة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                                 ),
                                 DropdownMenuItem(
                                   value: 'delay',
-                                  child: Text(_t('ওয়াক্তের পর মিনিট যোগ', 'Minutes after prayer', 'دقائق بعد الصلاة')),
+                                  child: Text(_t('ওয়াক্তের পর মিনিট যোগ', 'Minutes after prayer', 'دقائق بعد الصلاة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                                 ),
                                 DropdownMenuItem(
                                   value: 'fixed',
-                                  child: Text(_t('প্রতিদিন নির্দিষ্ট ঘড়ির সময়', 'Fixed daily clock time', 'وقت ثابت يومياً')),
+                                  child: Text(_t('প্রতিদিন নির্দিষ্ট ঘড়ির সময়', 'Fixed daily clock time', 'وقت ثابت يومياً'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                                 ),
                               ],
                               onChanged: (value) {
@@ -558,14 +573,16 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                             ),
                             if (mode == 'delay') ...[
                               const SizedBox(height: 12),
-                              Text(_t('কত মিনিট পরে অ্যালার্ম বাজবে?', 'Delay after prayer', 'التأخير بعد الصلاة')),
+                              Text(_t('কত মিনিট পরে অ্যালার্ম বাজবে?', 'Delay after prayer', 'التأخير بعد الصلاة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                               const SizedBox(height: 6),
                               Wrap(
                                 spacing: 7,
                                 runSpacing: 7,
                                 children: [0, 10, 15, 20, 30, 45, 60].map((m) {
                                   return ChoiceChip(
-                                    label: Text('$m ${_t('মিনিট', 'min', 'دقيقة')}'),
+                                    label: Text('$m ${_t('মিনিট', 'min', 'دقيقة')}',
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                                     selected: delay == m,
                                     onSelected: (_) => _changeAlarmDelay(id, m),
                                   );
@@ -579,6 +596,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                                   widget.isBn
                                       ? 'নিজের মতো মিনিট লিখুন (বর্তমান: $delay)'
                                       : 'Custom minutes (current: $delay)',
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                                 ),
                               ),
                             ],
@@ -589,6 +607,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                                 icon: const Icon(Icons.access_time),
                                 label: Text(
                                   '${_t('নির্দিষ্ট সময়', 'Fixed time', 'وقت محدد')}: ${fixedTime.format(context)}',
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                                 ),
                               ),
                             ],
@@ -604,7 +623,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
 
           const SizedBox(height: 20),
 
-          Text(_t('আমলের নোটিফিকেশন (Reminders)', 'Amal Reminders', 'تذكيرات الأعمال'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
+          Text(_t('আমলের নোটিফিকেশন (Reminders)', 'Amal Reminders', 'تذكيرات الأعمال'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0D5C3A))),
           const SizedBox(height: 8),
           ...amalNotifications.map((n) {
             bool isSet = _notifications[n['id']] ?? true;
@@ -612,7 +632,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
               margin: const EdgeInsets.symmetric(vertical: 4),
               child: SwitchListTile(
                 secondary: Icon(isSet ? Icons.notifications_active : Icons.notifications_off, color: isSet ? Colors.teal : Colors.grey),
-                title: Text(widget.language == 'ar' ? (n['titleAr'] ?? n['titleEn']!) : (widget.isBn ? n['titleBn']! : n['titleEn']!), style: const TextStyle(fontWeight: FontWeight.w500)),
+                title: Text(widget.language == 'ar' ? (n['titleAr'] ?? n['titleEn']!) : (widget.isBn ? n['titleBn']! : n['titleEn']!),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w500)),
                 value: isSet,
                 activeColor: Colors.teal,
                 onChanged: (val) => _toggleNotification(n['id']!, val),
@@ -621,7 +642,6 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
           }),
         ],
       ),
-    ),
     );
   }
 }

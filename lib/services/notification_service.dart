@@ -234,12 +234,12 @@ class NotificationService {
         return (start: times.maghrib, end: times.isha);
 
       case 'surah_mulk':
-        return (start: _at(date, 20, 0), end: tomorrowTimes.fajr);
+        return (start: _at(date, 20, 0), end: _at(date.add(const Duration(days: 1)), 0, 0));
 
       case 'muhasabah':
         return (
           start: _at(date, 21, 30),
-          end: _at(date.add(const Duration(days: 1)), 2, 0),
+          end: _at(date.add(const Duration(days: 1)), 0, 0),
         );
     }
 
@@ -272,15 +272,15 @@ class NotificationService {
         return (start: times.maghrib, end: times.isha);
 
       case 'isha':
-        return (start: times.isha, end: _at(date, 23, 59));
+        return (start: times.isha, end: _at(date.add(const Duration(days: 1)), 0, 0));
 
       case 'bedtime':
-        return (start: _at(date, 20, 0), end: tomorrowTimes.fajr);
+        return (start: _at(date, 20, 0), end: _at(date.add(const Duration(days: 1)), 0, 0));
 
       case 'muhasabah':
         return (
           start: _at(date, 21, 30),
-          end: _at(date.add(const Duration(days: 1)), 2, 0),
+          end: _at(date.add(const Duration(days: 1)), 0, 0),
         );
 
       default:

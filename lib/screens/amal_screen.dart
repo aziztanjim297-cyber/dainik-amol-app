@@ -45,7 +45,7 @@ class _AmalListScreenState extends State<AmalListScreen> {
   ui.TextDirection get _textDirection =>
       widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr;
 
-  final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> amolStatus = {};
   Map<String, bool> enabledAmols = {};
   List<AmalItem> allAmals = [];
@@ -61,7 +61,16 @@ class _AmalListScreenState extends State<AmalListScreen> {
     _initTimes();
     _loadAmolData();
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      final newTodayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      if (newTodayKey != todayKey) {
+        todayKey = newTodayKey;
+        _initTimes();
+        _loadAmolData();
+        _refreshAmalReminders();
+      } else {
+        setState(() {});
+      }
     });
   }
 
@@ -72,11 +81,28 @@ class _AmalListScreenState extends State<AmalListScreen> {
     super.dispose();
   }
 
-  void _initTimes() {
-    final coords = Coordinates(23.8103, 90.4125);
+  Future<void> _initTimes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble('location_lat');
+    final lon = prefs.getDouble('location_lon');
+
+    final coords = (lat != null && lon != null)
+        ? Coordinates(lat, lon)
+        : Coordinates(23.8103, 90.4125);
+
     final params = CalculationMethod.karachi.getParameters();
     params.madhab = widget.madhab == 'hanafi' ? Madhab.hanafi : Madhab.shafi;
-    prayerTimes = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+
+    final updatedTimes = PrayerTimes(
+      coords,
+      DateComponents.from(DateTime.now()),
+      params,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      prayerTimes = updatedTimes;
+    });
   }
 
   Future<void> _loadAmolData() async {
@@ -112,11 +138,24 @@ class _AmalListScreenState extends State<AmalListScreen> {
   }
 
   Future<void> _toggleAmol(String id) async {
-    if (amolStatus[id] == true) return;
+    if (amolStatus[id] == true || prayerTimes == null) return;
+
+    final item = allAmals.firstWhere(
+      (amal) => amal.id == id,
+      orElse: () => allAmals.first,
+    );
+    if (_getAmolStatus(item)['canCheck'] != true) return;
+
+    final dateKey = todayKey;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('${todayKey}_$id', true);
+
+    if (!mounted || dateKey != todayKey) return;
+    if (_getAmolStatus(item)['canCheck'] != true) return;
+
+    await prefs.setBool('${dateKey}_$id', true);
     await NotificationService.instance.cancelAmalReminders(id);
-    if (!mounted) return;
+
+    if (!mounted || dateKey != todayKey) return;
     setState(() => amolStatus[id] = true);
     widget.onAmalCompleted();
   }
@@ -299,51 +338,77 @@ class _AmalListScreenState extends State<AmalListScreen> {
   }
 
   Map<String, dynamic> _getAmolStatus(AmalItem item) {
-    if (prayerTimes == null) return {'status': 'running', 'label': _t('চলমান', 'Running', 'جارٍ'), 'color': Colors.green, 'canCheck': true};
-    DateTime now = DateTime.now();
-    DateTime start, end;
-
-    switch (item.prayerName) {
-      case 'tahajjud':
-        start = prayerTimes!.fajr.subtract(const Duration(minutes: 90));
-        end = prayerTimes!.fajr.subtract(const Duration(minutes: 10));
-        break;
-      case 'fajr':
-        start = prayerTimes!.fajr;
-        end = prayerTimes!.sunrise;
-        break;
-      case 'post_fajr':
-      case 'ishraq':
-        start = prayerTimes!.sunrise;
-        end = prayerTimes!.dhuhr.subtract(const Duration(minutes: 30));
-        break;
-      case 'dhuhr':
-        start = prayerTimes!.dhuhr;
-        end = prayerTimes!.asr;
-        break;
-      case 'asr':
-        start = prayerTimes!.asr;
-        end = prayerTimes!.maghrib;
-        break;
-      case 'maghrib':
-        start = prayerTimes!.maghrib;
-        end = prayerTimes!.isha;
-        break;
-      case 'isha':
-      case 'bedtime':
-      default:
-        start = prayerTimes!.isha;
-        end = DateTime(now.year, now.month, now.day, 23, 59);
-        break;
+    if (prayerTimes == null) {
+      return {
+        'status': 'upcoming',
+        'label': _t('সময় নির্ধারণ হচ্ছে', 'Calculating time', 'جارٍ تحديد الوقت'),
+        'color': Colors.blueGrey,
+        'canCheck': false,
+      };
     }
 
-    DateTime gracePeriodEnd = end.add(const Duration(minutes: 10));
+    final now = DateTime.now();
+    DateTime start = now;
+    DateTime end = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 1));
+    final isMidnightLocked = item.id == 'surah_mulk' ||
+        item.id == 'muhasabah' ||
+        item.prayerName == 'isha' ||
+        item.prayerName == 'bedtime';
+
+    switch (item.id) {
+      case 'surah_mulk':
+        start = DateTime(now.year, now.month, now.day, 20, 0);
+        break;
+      case 'muhasabah':
+        start = DateTime(now.year, now.month, now.day, 21, 30);
+        break;
+      default:
+        switch (item.prayerName) {
+          case 'tahajjud':
+            start = prayerTimes!.fajr.subtract(const Duration(minutes: 90));
+            end = prayerTimes!.fajr.subtract(const Duration(minutes: 10));
+            break;
+          case 'fajr':
+            start = prayerTimes!.fajr;
+            end = prayerTimes!.sunrise;
+            break;
+          case 'post_fajr':
+          case 'ishraq':
+            start = prayerTimes!.sunrise;
+            end = prayerTimes!.dhuhr.subtract(const Duration(minutes: 30));
+            break;
+          case 'dhuhr':
+            start = prayerTimes!.dhuhr;
+            end = prayerTimes!.asr;
+            break;
+          case 'asr':
+            start = prayerTimes!.asr;
+            end = prayerTimes!.maghrib;
+            break;
+          case 'maghrib':
+            start = prayerTimes!.maghrib;
+            end = prayerTimes!.isha;
+            break;
+          case 'isha':
+          case 'bedtime':
+          default:
+            start = prayerTimes!.isha;
+            break;
+        }
+    }
+
+    if (isMidnightLocked) {
+      end = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    }
+
+    final gracePeriodEnd = end.add(const Duration(minutes: 10));
 
     if (now.isBefore(start)) {
       return {'status': 'upcoming', 'label': _t('আসন্ন', 'Upcoming', 'قادم'), 'color': Colors.blueGrey, 'canCheck': false};
-    } else if (now.isAfter(start) && now.isBefore(end)) {
+    } else if (now.isBefore(end)) {
       return {'status': 'running', 'label': _t('চলমান', 'Running', 'جارٍ'), 'color': Colors.green, 'canCheck': true};
-    } else if (now.isAfter(end) && now.isBefore(gracePeriodEnd)) {
+    } else if (!isMidnightLocked && now.isBefore(gracePeriodEnd)) {
       return {'status': 'just_passed', 'label': _t('এইমাত্র শেষ (১০ মি.)', 'Just Passed (10m)', 'انتهى للتو (١٠ دقائق)'), 'color': Colors.deepOrange, 'canCheck': true};
     } else {
       return {'status': 'past', 'label': _t('সময় শেষ', 'Past', 'انتهى الوقت'), 'color': Colors.red, 'canCheck': false};

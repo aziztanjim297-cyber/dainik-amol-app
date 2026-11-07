@@ -125,7 +125,8 @@ class _LocationSettingsScreenState
     widget.onLocationChanged();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_t('অবস্থান সংরক্ষিত হয়েছে', 'Location saved', 'تم حفظ الموقع'))),
+      SnackBar(content: Text(_t('অবস্থান সংরক্ষিত হয়েছে', 'Location saved', 'تم حفظ الموقع'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr)),
     );
     Navigator.pop(context);
   }
@@ -257,11 +258,10 @@ class _LocationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: Text(_t('নামাজের সময়ের অবস্থান', 'Prayer Location', 'موقع الصلاة')),
+        title: Text(_t('নামাজের সময়ের অবস্থান', 'Prayer Location', 'موقع الصلاة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
       ),
@@ -270,12 +270,14 @@ class _LocationSettingsScreenState
         children: [
           ListTile(
             leading: const Icon(Icons.gps_fixed),
-            title: Text(_t('বর্তমান অবস্থান (GPS)', 'Current GPS location', 'الموقع الحالي (GPS)')),
+            title: Text(_t('বর্তমান অবস্থান (GPS)', 'Current GPS location', 'الموقع الحالي (GPS)'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
             subtitle: Text(_t(
               'আপনার প্রকৃত অবস্থান ব্যবহার করুন',
               'Use your actual location',
               'استخدم موقعك الفعلي',
-            )),
+            ),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
             onTap: _loading ? null : _useGps,
           ),
           const Divider(),
@@ -283,7 +285,8 @@ class _LocationSettingsScreenState
             onPressed: _selectCountry,
             icon: const Icon(Icons.public),
             label: Text(_countryName ??
-                _t('দেশ নির্বাচন করুন', 'Select country', 'اختر الدولة')),
+                _t('দেশ নির্বাচন করুন', 'Select country', 'اختر الدولة'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
           ),
           if (_countryCode == 'BD') ...[
             const SizedBox(height: 16),
@@ -302,7 +305,8 @@ class _LocationSettingsScreenState
                 items: _districts.map((d) {
                   return DropdownMenuItem<String>(
                     value: d['id'].toString(),
-                    child: Text(_localName(d)),
+                    child: Text(_localName(d),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                   );
                 }).toList(),
                 onChanged: (v) => setState(() {
@@ -323,7 +327,8 @@ class _LocationSettingsScreenState
                 items: _filteredUpazilas.map((u) {
                   return DropdownMenuItem<String>(
                     value: u['id'].toString(),
-                    child: Text(_localName(u)),
+                    child: Text(_localName(u),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
                   );
                 }).toList(),
                 onChanged: _districtId == null
@@ -333,7 +338,8 @@ class _LocationSettingsScreenState
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: _saveBangladeshLocation,
-                child: Text(_t('অবস্থান সংরক্ষণ করুন', 'Save location', 'حفظ الموقع')),
+                child: Text(_t('অবস্থান সংরক্ষণ করুন', 'Save location', 'حفظ الموقع'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
               ),
             ],
           ],
@@ -344,26 +350,29 @@ class _LocationSettingsScreenState
                 'শুধু দেশের নাম দিয়ে নির্ভুল নামাজের সময় নির্ণয় সম্ভব নয়। GPS ব্যবহার করুন।',
                 'A country name alone cannot determine accurate prayer times. Use GPS.',
                 'لا يمكن تحديد أوقات الصلاة بدقة باسم الدولة فقط. استخدم GPS.',
-              )),
+              ),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
             ),
           if (_message.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(_message, style: const TextStyle(color: Colors.red)),
+              child: Text(_message,
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr, style: const TextStyle(color: Colors.red)),
             ),
           if (_message.isNotEmpty && !_loading && _countryCode == 'BD')
             TextButton(
               onPressed: _loadAdministrativeData,
-              child: Text(_t('আবার চেষ্টা করুন', 'Try again', 'حاول مرة أخرى')),
+              child: Text(_t('আবার চেষ্টা করুন', 'Try again', 'حاول مرة أخرى'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr),
             ),
           const SizedBox(height: 16),
           Text(
             _t('জেলা ও উপজেলা তথ্য: Open Admin Data (CC BY 4.0)', 'District and upazila data: Open Admin Data (CC BY 4.0)', 'بيانات المناطق والنواحي: Open Admin Data (CC BY 4.0)'),
+          textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
-      ),
-    );
+      );
   }
 }

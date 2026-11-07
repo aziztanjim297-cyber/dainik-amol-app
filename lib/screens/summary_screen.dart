@@ -109,14 +109,16 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
             backgroundColor: const Color(0xFF0D5C3A),
             content: Text(widget.isBn
                 ? 'تم حفظ الصورة في مجلد التنزيلات!'
-                : 'Image saved to Download folder!'),
+                : 'Image saved to Download folder!',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('ছবি সেভ করতে ব্যর্থ: $e', 'Failed to save image: $e', 'فشل حفظ الصورة: $e'))),
+          SnackBar(content: Text(_t('ছবি সেভ করতে ব্যর্থ: $e', 'Failed to save image: $e', 'فشل حفظ الصورة: $e'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr)),
         );
       }
     }
@@ -156,14 +158,16 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
             backgroundColor: const Color(0xFF0D5C3A),
             content: Text(widget.isBn
                 ? 'تم حفظ ملف PDF في مجلد التنزيلات!'
-                : 'PDF saved to Download folder!'),
+                : 'PDF saved to Download folder!',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('PDF সেভ করতে ব্যর্থ: $e', 'Failed to save PDF: $e', 'فشل حفظ ملف PDF: $e'))),
+          SnackBar(content: Text(_t('PDF সেভ করতে ব্যর্থ: $e', 'Failed to save PDF: $e', 'فشل حفظ ملف PDF: $e'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr)),
         );
       }
     }
@@ -173,11 +177,10 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Directionality(
-      textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
-        title: Text(_t('আমল ও জিকির সামারি', 'Amal & Zikr Summary', 'ملخص الأعمال والأذكار'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(_t('আমল ও জিকির সামারি', 'Amal & Zikr Summary', 'ملخص الأعمال والأذكار'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF0D5C3A),
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -202,7 +205,6 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                 _buildStatsTab(_monthlyStats, _t('বিগত ৩০ দিনের সার্বিক অগ্রগতি', 'Past 30 Days Summary', 'ملخص آخر ٣٠ يوماً'), isDark),
               ],
             ),
-    ),
     );
   }
 
@@ -220,6 +222,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
           children: [
             Text(
               '${_t('তারিখ', 'Date', 'التاريخ')}: ${DateFormat('d MMMM yyyy', widget.language).format(_selectedDate)}',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             IconButton(
@@ -263,11 +266,13 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                     children: [
                       const Icon(Icons.verified, color: Color(0xFF0D5C3A), size: 24),
                       const SizedBox(width: 8),
-                      Text(_t('দৈনন্দিন আমল ও জিকির রিপোর্ট', 'Amal & Zikr Report', 'تقرير الأعمال والأذكار اليومية'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                      Text(_t('দৈনন্দিন আমল ও জিকির রিপোর্ট', 'Amal & Zikr Report', 'تقرير الأعمال والأذكار اليومية'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(DateFormat('EEEE, d MMMM yyyy', widget.language).format(_selectedDate), style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                  Text(DateFormat('EEEE, d MMMM yyyy', widget.language).format(_selectedDate),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
                   const Divider(height: 20),
 
                   // আমলের অগ্রগতি
@@ -284,19 +289,23 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   // জিকিরের সারসংক্ষেপ
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(_t('জিকিরের পরিসংখ্যান:', 'Zikr Statistics:', 'إحصائيات الأذكار:'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    child: Text(_t('জিকিরের পরিসংখ্যান:', 'Zikr Statistics:', 'إحصائيات الأذكار:'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                   const SizedBox(height: 8),
                   if (_dailyRecord?.zikrCounts == null || _dailyRecord!.zikrCounts.isEmpty)
-                    Text(_t('এই তারিখে কোনো জিকিরের হিসাব নেই।', 'No zikr record on this day.', 'لا توجد أذكار مسجلة في هذا اليوم.'), style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                    Text(_t('এই তারিখে কোনো জিকিরের হিসাব নেই।', 'No zikr record on this day.', 'لا توجد أذكار مسجلة في هذا اليوم.'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
                   else
                     ..._dailyRecord!.zikrCounts.entries.map((e) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(e.key.split('—')[0].trim(), style: const TextStyle(fontWeight: FontWeight.w500)),
-                          Text('${e.value} ${_t('বার', 'times', 'مرة')}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                          Text(e.key.split('—')[0].trim(),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          Text('${e.value} ${_t('বার', 'times', 'مرة')}',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                         ],
                       ),
                     )),
@@ -314,7 +323,8 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D5C3A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                 icon: const Icon(Icons.image, size: 18),
-                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة')),
+                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                 onPressed: _saveAsImage,
               ),
             ),
@@ -323,7 +333,8 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0D5C3A), padding: const EdgeInsets.symmetric(vertical: 12)),
                 icon: const Icon(Icons.picture_as_pdf, size: 18),
-                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF')),
+                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                 onPressed: _saveAsPdf,
               ),
             ),
@@ -361,6 +372,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                 children: [
                   Text(
                     title,
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -376,9 +388,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                     ),
                     title: Text(widget.isBn
                         ? 'গড় আমল সম্পন্ন'
-                        : 'Average Completed'),
+                        : 'Average Completed',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                     trailing: Text(
                       '$done / $total ($percent%)',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -393,9 +407,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                     ),
                     title: Text(widget.isBn
                         ? 'মোট পঠিত জিকির'
-                        : 'Total Zikr Counts'),
+                        : 'Total Zikr Counts',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                     trailing: Text(
                       '$totalZikr ${_t('বার', 'times', 'مرة')}',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -406,6 +422,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   const Divider(height: 24),
                   Text(
                     _t('জিকিরভিত্তিক হিসাব', 'Zikr Breakdown', 'تفصيل الأذكار'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -418,6 +435,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       widget.isBn
                           ? 'لا توجد أذكار مسجلة خلال هذه الفترة'
                           : 'No zikr recorded for this period',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                       style: TextStyle(color: Colors.grey[600]),
                     )
                   else
@@ -430,9 +448,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                           size: 9,
                           color: Color(0xFF0D5C3A),
                         ),
-                        title: Text(entry.key.split('—')[0].trim()),
+                        title: Text(entry.key.split('—')[0].trim(),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                         trailing: Text(
                           '${entry.value} ${_t('বার', 'times', 'مرة')}',
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0D5C3A),
@@ -456,7 +476,8 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.image, size: 18),
-                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة')),
+                label: Text(_t('ছবি সেভ করুন', 'Save Image', 'حفظ الصورة'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                 onPressed: _saveAsImage,
               ),
             ),
@@ -468,7 +489,8 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.picture_as_pdf, size: 18),
-                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF')),
+                label: Text(_t('PDF সেভ করুন', 'Save PDF', 'حفظ PDF'),
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                 onPressed: _saveAsPdf,
               ),
             ),
@@ -481,9 +503,11 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
   Widget _metricBox(String label, String value, Color color) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(label,
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        Text(value,
+          textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
       ],
     );
   }
