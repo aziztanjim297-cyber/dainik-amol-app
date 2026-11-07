@@ -47,6 +47,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return widget.isBn ? item.categoryBn : item.categoryEn;
   }
+  String? _bangladeshHijriDate;
+  String _hijriDateKey = '';
+
+  Future<void> _refreshHijriDate() async {
+    final now = DateTime.now();
+    DateTime effectiveDate = now;
+    final maghrib = prayerTimes?.maghrib;
+    if (maghrib != null && !now.isBefore(maghrib)) {
+      effectiveDate = now.add(const Duration(days: 1));
+    }
+    final key = DateFormat('yyyy-MM-dd').format(effectiveDate);
+    if (key == _hijriDateKey) return;
+    _hijriDateKey = key;
+
+    final value = await HijriService.getBangladeshHijriDate(
+      now, widget.isBn, maghrib, widget.language,
+    );
+    if (!mounted || key != _hijriDateKey) return;
+    setState(() => _bangladeshHijriDate = value);
+  }
+
   PrayerTimes? prayerTimes;
   Timer? _timer;
   String _currentTime = '';
@@ -77,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initializeLocation();
     _initializeData();
+    _refreshHijriDate();
     _startClock();
   }
 
@@ -176,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
       DateComponents.from(DateTime.now()),
       _getParams(),
     );
+    _refreshHijriDate();
   }
 
   Future<void> _initializeData() async {
@@ -285,6 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       final now = DateTime.now();
+    _refreshHijriDate();
       final todayKey = DateFormat('yyyy-MM-dd').format(now);
 
       if (todayKey != _activeDateKey && !_dateChangeProcessing) {
@@ -392,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
             waqtLabel = _t('যোহরের ওয়াক্ত শুরু হতে বাকি', 'Dhuhr begins in', 'يبدأ الظهر بعد');
             countdownTarget = dhuhr;
           } else if (now.isBefore(asr)) {
-            waqtLabel = _t('যোহরের ওয়াক্ত বাকি আছে', 'Dhuhr time remaining', 'الوقت المتبقي للظهر');
+            waqtLabel = _t('চাশতের সময় বাকি আছে', 'Dhuhr time remaining', 'الوقت المتبقي للظهر');
             countdownTarget = asr;
           } else if (now.isBefore(maghrib.subtract(const Duration(minutes: 15)))) {
             waqtLabel = _t('আসরের ওয়াক্ত বাকি আছে', 'Asr time remaining', 'الوقت المتبقي للعصر');
@@ -602,7 +626,7 @@ class _HomeScreenState extends State<HomeScreen> {
       widget.language,
     ).format(now);
 
-    final hijri = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language);
+    final hijri = (_bangladeshHijriDate ?? HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language));
     final bangla = BanglaDateHelper.format(now, sunriseTime: prayerTimes?.sunrise);
 
     return Card(
@@ -629,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     List<AmalItem> runningAmols = _getRunningAmols();
 
-    String hijriDate = HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language);
+    String hijriDate = (_bangladeshHijriDate ?? HijriService.getHijriDate(now, widget.isBn, prayerTimes?.maghrib, widget.language));
     String hijriNote = HijriService.getHijriNote(widget.isBn, widget.language);
     String banglaDate = BanglaDateHelper.format(now, sunriseTime: prayerTimes?.sunrise);
 

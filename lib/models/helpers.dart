@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class BanglaDateHelper {
   static final List<String> _bnMonths = ['বৈশাখ', 'জ্যৈষ্ঠ', 'আষাঢ়', 'শ্রাবণ', 'ভাদ্র', 'আশ্বিন', 'কার্তিক', 'অগ্রহায়ণ', 'পৌষ', 'মাঘ', 'ফাল্গুন', 'চৈত্র'];
@@ -78,6 +79,110 @@ class HijriService {
     } else {
       return '${h.hDay} ${enMonths[mIdx]}, ${h.hYear} AH';
     }
+  }
+
+
+  // বাংলাদেশ-সমন্বিত হিজরি তারিখ: অনলাইন API, দিনের ক্যাশ, তারপর স্থানীয় বিকল্প
+  static Future<String> getBangladeshHijriDate(
+    DateTime dt, [
+    bool isBn = true,
+    DateTime? maghribTime,
+    String language = '',
+  ]) async {
+    DateTime calcDt = dt;
+    if (maghribTime != null && !dt.isBefore(maghribTime)) {
+      calcDt = dt.add(const Duration(days: 1));
+    }
+
+    final dateKey =
+        '${calcDt.year.toString().padLeft(4, '0')}-${calcDt.month.toString().padLeft(2, '0')}-${calcDt.day.toString().padLeft(2, '0')}';
+    final cacheKey = 'bd_hijri_$dateKey';
+    final prefs = await SharedPreferences.getInstance();
+
+    String formatDate(Map<String, dynamic> data) {
+      final year = (data['year'] as num).toInt();
+      final month = (data['month'] as num).toInt();
+      final day = (data['day'] as num).toInt();
+      if (month < 1 || month > 12 || day < 1 || day > 30) {
+        throw const FormatException('Invalid Hijri date');
+      }
+
+      const bnMonths = [
+        'মহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি',
+        'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান',
+        'রমাদান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'
+      ];
+      const enMonths = [
+        'Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani",
+        'Jumada al-Ula', 'Jumada al-Akhirah', 'Rajab', "Sha'ban",
+        'Ramadan', 'Shawwal', "Dhu al-Qi'dah", 'Dhu al-Hijjah'
+      ];
+      const arMonths = [
+        'مُحَرَّم', 'صَفَر', 'رَبِيع الأَوَّل', 'رَبِيع الثَّانِي',
+        'جُمَادَى الأُولَى', 'جُمَادَى الآخِرَة', 'رَجَب', 'شَعْبَان',
+        'رَمَضَان', 'شَوَّال', 'ذُو القَعْدَة', 'ذُو الحِجَّة'
+      ];
+      final i = month - 1;
+      if (language == 'ar') {
+        return '${_toArabicNum(day)} ${arMonths[i]}، ${_toArabicNum(year)} هـ';
+      }
+      if (isBn) {
+        return '${BanglaDateHelper.toBanglaNum(day)} ${bnMonths[i]}, ${BanglaDateHelper.toBanglaNum(year)} হিজরি';
+      }
+      return '$day ${enMonths[i]}, $year AH';
+    }
+
+    // নির্দিষ্ট দিনের ক্যাশ থাকলে সেটি আগে ব্যবহার
+    final saved = prefs.getString(cacheKey);
+    if (saved != null) {
+      try {
+        final result = formatDate(
+          Map<String, dynamic>.from(jsonDecode(saved) as Map),
+        );
+        // অনলাইন আপডেটের সুযোগ রাখতে নিচে API-ও চেষ্টা করা হবে
+        if (result.isEmpty) throw const FormatException();
+      } catch (_) {
+        await prefs.remove(cacheKey);
+      }
+    }
+
+    try {
+      final uri = Uri.https(
+        'www.bangladatetoday.com',
+        '/api/convert',
+        {'date': dateKey},
+      );
+      final response = await http.get(uri).timeout(
+        const Duration(seconds: 8),
+      );
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final hijri = Map<String, dynamic>.from(body['hijri'] as Map);
+        final resultData = <String, dynamic>{
+          'year': hijri['year'],
+          'month': hijri['month'],
+          'day': hijri['day'],
+        };
+        final result = formatDate(resultData);
+        await prefs.setString(cacheKey, jsonEncode(resultData));
+        return result;
+      }
+    } catch (_) {
+      // নেটওয়ার্ক বা API সমস্যা হলে ক্যাশ/স্থানীয় হিসাব ব্যবহার হবে
+    }
+
+    // অফলাইনে একই দিনের সংরক্ষিত বাংলাদেশি তারিখ
+    final offlineSaved = prefs.getString(cacheKey);
+    if (offlineSaved != null) {
+      try {
+        return formatDate(
+          Map<String, dynamic>.from(jsonDecode(offlineSaved) as Map),
+        );
+      } catch (_) {}
+    }
+
+    // প্রথমবার অফলাইন হলে প্যাকেজের স্থানীয় হিসাব
+    return getHijriDate(calcDt, isBn, null, language);
   }
 
   static String getHijriNote([bool isBn = true, String language = '']) {
