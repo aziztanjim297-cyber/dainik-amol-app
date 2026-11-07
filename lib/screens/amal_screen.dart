@@ -1,4 +1,4 @@
-import 'dart:ui' show TextDirection;
+import 'dart:ui' as ui;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -42,8 +42,8 @@ class _AmalListScreenState extends State<AmalListScreen> {
     return widget.isBn ? item.categoryBn : item.categoryEn;
   }
 
-  TextDirection get _textDirection =>
-      widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+  ui.TextDirection get _textDirection =>
+      widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr;
 
   final String todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
   Map<String, bool> amolStatus = {};

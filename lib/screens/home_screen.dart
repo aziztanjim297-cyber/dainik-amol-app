@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -30,8 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String _t(String bn, String en, String ar) =>
       widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
 
-  TextDirection get _textDirection =>
-      widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+  ui.TextDirection get _textDirection =>
+      widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr;
 
   String _amalTitle(AmalItem item) {
     if (widget.language == 'ar') {

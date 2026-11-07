@@ -1,4 +1,4 @@
-import 'dart:ui' show TextDirection;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -132,8 +132,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                   'ما شاء الله! اكتمل العدد $_targetGoal مرة.',
                 ),
                 textDirection: widget.language == 'ar'
-                    ? TextDirection.rtl
-                    : TextDirection.ltr,
+                    ? ui.TextDirection.rtl
+                    : ui.TextDirection.ltr,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               duration: const Duration(seconds: 2),
@@ -160,8 +160,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
             'Round reset. Today\'s total is preserved.',
             'تم تصفير الجولة الحالية، مع الحفاظ على إجمالي عدد اليوم.'),
             textDirection: widget.language == 'ar'
-                ? TextDirection.rtl
-                : TextDirection.ltr,
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
           ),
           duration: const Duration(seconds: 1),
         ),
@@ -186,13 +186,13 @@ class _TasbihScreenState extends State<TasbihScreen> {
         title: Text(
           _t('লক্ষ্যমাত্রা নির্ধারণ করুন', 'Set Target Goal', 'تحديد الهدف'),
           textDirection: widget.language == 'ar'
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+              ? ui.TextDirection.rtl
+              : ui.TextDirection.ltr,
         ),
         content: TextField(
           textDirection: widget.language == 'ar'
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+              ? ui.TextDirection.rtl
+              : ui.TextDirection.ltr,
           controller: controller,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
@@ -202,8 +202,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
               'مثال: ٣٣، ٣٤، ١٠٠ أو ٥٠٠',
             ),
             hintTextDirection: widget.language == 'ar'
-                ? TextDirection.rtl
-                : TextDirection.ltr,
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
             border: const OutlineInputBorder(),
           ),
         ),
@@ -267,8 +267,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
         title: Text(
           _t('ডিজিটাল জিকির কাউন্টার', 'Tasbih Counter', 'عداد التسبيح الرقمي'),
           textDirection: widget.language == 'ar'
-              ? TextDirection.rtl
-              : TextDirection.ltr,
+              ? ui.TextDirection.rtl
+              : ui.TextDirection.ltr,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: isDark
@@ -300,8 +300,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                           child: Text(
                             (widget.language == 'ar' ? z.split('—').last.trim() : z),
                             textDirection: widget.language == 'ar'
-                                ? TextDirection.rtl
-                                : TextDirection.ltr,
+                                ? ui.TextDirection.rtl
+                                : ui.TextDirection.ltr,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -323,8 +323,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
               Text(
                 _t('লক্ষ্যমাত্রা: ', 'Goal: ', 'الهدف: '),
                 textDirection: widget.language == 'ar'
-                    ? TextDirection.rtl
-                    : TextDirection.ltr,
+                    ? ui.TextDirection.rtl
+                    : ui.TextDirection.ltr,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               ActionChip(
@@ -412,8 +412,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                             ? '${_t("লক্ষ্য", "Goal", "الهدف")}: $_targetGoal'
                             : _t('চাপ দিন', 'Tap', 'اضغط'),
                         textDirection: widget.language == 'ar'
-                            ? TextDirection.rtl
-                            : TextDirection.ltr,
+                            ? ui.TextDirection.rtl
+                            : ui.TextDirection.ltr,
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -448,8 +448,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 'Today\'s Total Zikr Counts:',
                 'إجمالي أذكار اليوم (السجل المحفوظ):'),
             textDirection: widget.language == 'ar'
-                ? TextDirection.rtl
-                : TextDirection.ltr,
+                ? ui.TextDirection.rtl
+                : ui.TextDirection.ltr,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -466,8 +466,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 title: Text(
                   (widget.language == 'ar' ? z.split('—').last.trim() : z),
                   textDirection: widget.language == 'ar'
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                      ? ui.TextDirection.rtl
+                      : ui.TextDirection.ltr,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -476,8 +476,8 @@ class _TasbihScreenState extends State<TasbihScreen> {
                 trailing: Text(
                   '$totalToday ${_t("বার", "times", "مرة")}',
                   textDirection: widget.language == 'ar'
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                      ? ui.TextDirection.rtl
+                      : ui.TextDirection.ltr,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: isDark ? const Color(0xFF80D6A8) : const Color(0xFF0D5C3A),

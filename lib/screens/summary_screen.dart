@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'dart:ui' show TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
@@ -175,7 +174,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Directionality(
-      textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
       child: Scaffold(
       appBar: AppBar(
         title: Text(_t('আমল ও জিকির সামারি', 'Amal & Zikr Summary', 'ملخص الأعمال والأذكار'), style: const TextStyle(fontWeight: FontWeight.bold)),
