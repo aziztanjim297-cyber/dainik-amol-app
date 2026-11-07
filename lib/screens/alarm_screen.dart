@@ -441,9 +441,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.isBn
-                        ? 'ওয়াক্ত অনুযায়ী সিস্টেম অ্যালার্ট ও ভাইব্রেশন নিশ্চিত করতে নিচের বাটন দিয়ে পরীক্ষা করুন।'
-                        : 'Test system alert sound and hardware vibration for prayers.',
+                    _t('ওয়াক্ত অনুযায়ী সিস্টেম অ্যালার্ট ও ভাইব্রেশন নিশ্চিত করতে নিচের বাটন দিয়ে পরীক্ষা করুন.', 'Test system alert sound and hardware vibration for prayers.', 'اختبر صوت تنبيه النظام واهتزاز الجهاز لمواقيت الصلاة.'),
           textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                     style: const TextStyle(fontSize: 12, color: Colors.black87),
                   ),
@@ -593,9 +591,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                                 onPressed: () => _customAlarmDelay(id),
                                 icon: const Icon(Icons.edit),
                                 label: Text(
-                                  widget.isBn
-                                      ? 'নিজের মতো মিনিট লিখুন (বর্তমান: $delay)'
-                                      : 'Custom minutes (current: $delay)',
+                                  _t('নিজের মতো মিনিট লিখুন (বর্তমান: $delay)', 'Custom minutes (current: $delay)', 'تحديد دقائق مخصصة (الحالي: $delay)'),
           textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                                 ),
                               ),

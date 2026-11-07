@@ -126,7 +126,7 @@ class _DainikAmolAppState extends State<DainikAmolApp> {
     return MaterialApp(
       title: _language == 'bn' ? 'দৈনন্দিন আমল' : (_language == 'ar' ? 'الأعمال اليومية' : 'Dainik Amal'),
       debugShowCheckedModeBanner: false,
-      locale: Locale(_language == 'ar' ? 'en' : _language),
+      locale: Locale(_language),
       supportedLocales: const [
         Locale('bn'),
         Locale('en'),
@@ -332,7 +332,9 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
         },
         children: screens,
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: Directionality(
+        textDirection: TextDirection.ltr,
+        child: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) {
           _pageController.jumpToPage(idx);
@@ -345,6 +347,7 @@ class _MainMasterScreenState extends State<MainMasterScreen> {
           NavigationDestination(icon: const Icon(Icons.touch_app), label: widget.language == 'bn' ? 'জিকির' : (widget.language == 'ar' ? 'التسبيح' : 'Tasbih')),
           NavigationDestination(icon: const Icon(Icons.settings), label: widget.language == 'bn' ? 'সেটিংস' : (widget.language == 'ar' ? 'الإعدادات' : 'Settings')),
         ],
+        ),
       ),
     );
   }

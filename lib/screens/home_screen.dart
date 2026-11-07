@@ -641,7 +641,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 6),
             Text(hijri),
             const SizedBox(height: 4),
-            if (widget.language == 'bn') Text(bangla),
+            Text(bangla),
           ],
         ),
       ),
@@ -726,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Icon(Icons.wb_sunny_outlined, size: 18, color: Colors.deepOrange),
-                        if (widget.language == 'bn') Text(banglaDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
+                        Text(banglaDate, style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.orangeAccent : Colors.deepOrange)),
                       ],
                     ),
                   ),

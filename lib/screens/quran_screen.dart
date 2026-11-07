@@ -23,6 +23,16 @@ class QuranScreen extends StatefulWidget {
 class _QuranScreenState extends State<QuranScreen> {
   String _t(String bn, String en, [String? ar]) =>
       widget.language == 'ar' ? (ar ?? en) : (widget.isBn ? bn : en);
+
+  String _localizeDigits(String value) {
+    if (widget.language != 'ar') return value;
+    const western = '0123456789';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return value.split('').map((char) {
+      final index = western.indexOf(char);
+      return index == -1 ? char : arabic[index];
+    }).join();
+  }
   late PdfViewerController _pdfController;
   int _currentPage = 2;
   int _pageCount = 611;
@@ -49,17 +59,39 @@ class _QuranScreenState extends State<QuranScreen> {
   }
 
 
+  Future<bool> _isValidPdf(File file) async {
+    try {
+      if (!await file.exists() || await file.length() < 1000) return false;
+      final header = await file.openRead(0, 5).fold<List<int>>(
+        <int>[],
+        (a, b) => a..addAll(b),
+      );
+      return String.fromCharCodes(header) == '%PDF-';
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _preparePdf() async {
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.path}/quran.pdf');
+      final part = File('${dir.path}/quran.pdf.part');
 
-      if (await file.exists() && await file.length() > 1000) {
+      if (await part.exists()) await part.delete();
+
+      if (await _isValidPdf(file)) {
         if (mounted) setState(() => _pdfPath = file.path);
+      } else if (await file.exists()) {
+        await file.delete();
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _downloadError = _t('ফাইল প্রস্তুত করা যায়নি: $e', 'Could not prepare file: $e', 'تعذّر تجهيز الملف: $e'));
+        setState(() => _downloadError = _t(
+          'ফাইল প্রস্তুত করা যায়নি: $e',
+          'Could not prepare file: $e',
+          'تعذّر تجهيز الملف: $e',
+        ));
       }
     }
   }
@@ -74,26 +106,31 @@ class _QuranScreenState extends State<QuranScreen> {
     });
 
     final client = http.Client();
-    File? target;
     IOSink? sink;
+    File? partFile;
 
     try {
       final dir = await getApplicationSupportDirectory();
-      target = File('${dir.path}/quran.pdf');
+      final target = File('${dir.path}/quran.pdf');
+      partFile = File('${dir.path}/quran.pdf.part');
 
-      final response = await client.send(
-        http.Request('GET', Uri.parse(_pdfUrl)),
-      );
+      if (await partFile.exists()) await partFile.delete();
+
+      final response = await client
+          .send(http.Request('GET', Uri.parse(_pdfUrl)))
+          .timeout(const Duration(minutes: 2));
 
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
 
       final total = response.contentLength ?? 0;
-      sink = target.openWrite();
+      sink = partFile.openWrite();
       var received = 0;
 
-      await for (final chunk in response.stream) {
+      await for (final chunk in response.stream.timeout(
+        const Duration(minutes: 2),
+      )) {
         sink.add(chunk);
         received += chunk.length;
 
@@ -106,36 +143,51 @@ class _QuranScreenState extends State<QuranScreen> {
       await sink.close();
       sink = null;
 
-      if (received < 1000) {
-        throw Exception(_t('ডাউনলোড অসম্পূর্ণ', 'Download incomplete', 'اكتمل التنزيل بشكل غير صحيح'));
+      if (received < 1000 || (total > 0 && received != total)) {
+        throw Exception(_t(
+          'ডাউনলোড অসম্পূর্ণ',
+          'Download incomplete',
+          'التنزيل غير مكتمل',
+        ));
       }
 
-      final header = await target.openRead(0, 5).fold<List<int>>(
-        <int>[],
-        (a, b) => a..addAll(b),
-      );
-
-      if (String.fromCharCodes(header) != '%PDF-') {
-        throw Exception(_t('বৈধ PDF পাওয়া যায়নি', 'Invalid PDF file', 'ملف PDF غير صالح'));
+      if (!await _isValidPdf(partFile)) {
+        throw Exception(_t(
+          'বৈধ PDF পাওয়া যায়নি',
+          'Invalid PDF file',
+          'ملف PDF غير صالح',
+        ));
       }
+
+      // যাচাইকৃত অস্থায়ী ফাইলটি মূল PDF হিসেবে সংরক্ষণ।
+      final savedFile = await partFile.rename(target.path);
 
       if (mounted) {
         setState(() {
-          _pdfPath = target!.path;
+          _pdfPath = savedFile.path;
           _isDownloading = false;
           _downloadProgress = 1;
         });
       }
     } catch (e) {
-      if (sink != null) await sink.close();
-      if (target != null && await target.exists()) {
-        await target.delete();
+      if (sink != null) {
+        try {
+          await sink.close();
+        } catch (_) {}
+      }
+
+      if (partFile != null && await partFile.exists()) {
+        await partFile.delete();
       }
 
       if (mounted) {
         setState(() {
           _isDownloading = false;
-          _downloadError = _t('ডাউনলোড ব্যর্থ: $e', 'Download failed: $e', 'فشل التنزيل: $e');
+          _downloadError = _t(
+            'ডাউনলোড ব্যর্থ: $e',
+            'Download failed: $e',
+            'فشل التنزيل: $e',
+          );
         });
       }
     } finally {
@@ -210,17 +262,19 @@ class _QuranScreenState extends State<QuranScreen> {
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final last = prefs.getInt('quran_last_page') ?? 2;
+    final last = (prefs.getInt('quran_last_page') ?? 2)
+        .clamp(1, _pageCount).toInt();
     final bMarks = prefs.getStringList('quran_bmarks') ?? [];
     final oldMarks = prefs.getStringList('quran_bookmarks_list') ?? [];
+
     final allMarks = {
       ...bMarks.map((e) => int.tryParse(e)).whereType<int>(),
       ...oldMarks.map((e) => int.tryParse(e)).whereType<int>(),
-    };
+    }.where((page) => page >= 1 && page <= _pageCount).toSet();
 
     await prefs.setStringList(
       'quran_bmarks',
-      allMarks.map((e) => e.toString()).toList(),
+      (allMarks.toList()..sort()).map((e) => e.toString()).toList(),
     );
 
     if (!mounted) return;
@@ -229,17 +283,14 @@ class _QuranScreenState extends State<QuranScreen> {
       _currentPage = last;
       _bookmarks = allMarks;
     });
-
-
   }
 
   Future<void> _onPageChanged(PdfPageChangedDetails details) async {
     final p = details.newPageNumber;
+    if (p < 1 || p > _pageCount) return;
 
     if (mounted) {
-      setState(() {
-        _currentPage = p;
-      });
+      setState(() => _currentPage = p);
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -248,6 +299,7 @@ class _QuranScreenState extends State<QuranScreen> {
 
   Future<void> _toggleBookmark() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
 
     setState(() {
       if (_bookmarks.contains(_currentPage)) {
@@ -257,9 +309,10 @@ class _QuranScreenState extends State<QuranScreen> {
       }
     });
 
+    final pages = _bookmarks.toList()..sort();
     await prefs.setStringList(
       'quran_bmarks',
-      _bookmarks.map((e) => e.toString()).toList(),
+      pages.map((e) => e.toString()).toList(),
     );
   }
 
@@ -459,7 +512,7 @@ class _QuranScreenState extends State<QuranScreen> {
                           radius: 13,
                           backgroundColor: const Color(0xFF0D5C3A),
                           child: Text(
-                            '${s['no']}',
+                            _localizeDigits('${s['no']}'),
                             style: const TextStyle(
                               fontSize: 11,
                               color: Colors.white,
@@ -480,7 +533,7 @@ class _QuranScreenState extends State<QuranScreen> {
                           ),
                         ),
                         trailing: Text(
-                          _t('পৃষ্ঠা ${s['page']}', 'Page ${s['page']}', 'الصفحة ${s['page']}'),
+                          _localizeDigits(_t('পৃষ্ঠা ${s['page']}', 'Page ${s['page']}', 'الصفحة ${s['page']}')),
                           textDirection: widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                           style: const TextStyle(
                             color: Colors.green,
@@ -588,7 +641,7 @@ class _QuranScreenState extends State<QuranScreen> {
                 if (!mounted) return;
 
                 final savedPage = prefs.getInt('quran_last_page') ?? 2;
-                final page = savedPage.clamp(1, d.document.pages.count);
+                final page = savedPage.clamp(1, d.document.pages.count).toInt();
 
                 setState(() {
                   _pageCount = d.document.pages.count;

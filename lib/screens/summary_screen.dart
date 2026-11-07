@@ -25,6 +25,22 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
   String _t(String bn, String en, String ar) =>
       widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
 
+  String _localizedZikrName(String raw) {
+    final name = raw.split('—').first.trim();
+    const translations = {
+      'সুবহানাল্লাহ': ['SubhanAllah', 'سُبْحَانَ اللَّهِ'],
+      'আলহামদুলিল্লাহ': ['Alhamdulillah', 'الْحَمْدُ لِلَّهِ'],
+      'আল্লাহু আকবার': ['Allahu Akbar', 'اللَّهُ أَكْبَرُ'],
+      'আস্তাগফিরুল্লাহ': ['Astaghfirullah', 'أَسْتَغْفِرُ اللَّهَ'],
+      'দরুদ শরিফ': ['Salawat upon the Prophet', 'الصَّلَاةُ عَلَى النَّبِيِّ'],
+    };
+    final translated = translations[name];
+    if (translated == null) return name;
+    if (widget.language == 'ar') return translated[1];
+    if (widget.language == 'en') return translated[0];
+    return name;
+  }
+
 
   late TabController _tabController;
   final GlobalKey _reportCardKey = GlobalKey();
@@ -107,9 +123,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF0D5C3A),
-            content: Text(widget.isBn
-                ? 'تم حفظ الصورة في مجلد التنزيلات!'
-                : 'Image saved to Download folder!',
+            content: Text(_t('ছবি ডাউনলোড ফোল্ডারে সংরক্ষণ হয়েছে', 'Image saved to Download folder!', 'تم حفظ الصورة في مجلد التنزيلات!'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
           ),
         );
@@ -156,9 +170,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: const Color(0xFF0D5C3A),
-            content: Text(widget.isBn
-                ? 'تم حفظ ملف PDF في مجلد التنزيلات!'
-                : 'PDF saved to Download folder!',
+            content: Text(_t('PDF ডাউনলোড ফোল্ডারে সংরক্ষণ হয়েছে', 'PDF saved to Download folder!', 'تم حفظ ملف PDF في مجلد التنزيلات!'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
           ),
         );
@@ -288,7 +300,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
 
                   // জিকিরের সারসংক্ষেপ
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Text(_t('জিকিরের পরিসংখ্যান:', 'Zikr Statistics:', 'إحصائيات الأذكار:'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
@@ -302,7 +314,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(e.key.split('—')[0].trim(),
+                          Text(_localizedZikrName(e.key),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w500)),
                           Text('${e.value} ${_t('বার', 'times', 'مرة')}',
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
@@ -386,9 +398,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       Icons.check_circle_outline,
                       color: Colors.green,
                     ),
-                    title: Text(widget.isBn
-                        ? 'গড় আমল সম্পন্ন'
-                        : 'Average Completed',
+                    title: Text(_t('গড় আমল সম্পন্ন', 'Average Completed', 'متوسط الأعمال المكتملة'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                     trailing: Text(
                       '$done / $total ($percent%)',
@@ -405,9 +415,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                       Icons.touch_app_outlined,
                       color: Colors.teal,
                     ),
-                    title: Text(widget.isBn
-                        ? 'মোট পঠিত জিকির'
-                        : 'Total Zikr Counts',
+                    title: Text(_t('মোট পঠিত জিকির', 'Total Zikr Counts', 'إجمالي مرات الذكر'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                     trailing: Text(
                       '$totalZikr ${_t('বার', 'times', 'مرة')}',
@@ -432,9 +440,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                   const SizedBox(height: 8),
                   if (zikrCounts.isEmpty)
                     Text(
-                      widget.isBn
-                          ? 'لا توجد أذكار مسجلة خلال هذه الفترة'
-                          : 'No zikr recorded for this period',
+                      _t('এই সময়ে কোনো জিকিরের হিসাব নেই।', 'No zikr recorded for this period', 'لا توجد أذكار مسجلة خلال هذه الفترة'),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr,
                       style: TextStyle(color: Colors.grey[600]),
                     )
@@ -448,7 +454,7 @@ class _SummaryScreenState extends State<SummaryScreen> with SingleTickerProvider
                           size: 9,
                           color: Color(0xFF0D5C3A),
                         ),
-                        title: Text(entry.key.split('—')[0].trim(),
+                        title: Text(_localizedZikrName(entry.key),
           textDirection: widget.language == 'ar' ? ui.TextDirection.rtl : ui.TextDirection.ltr),
                         trailing: Text(
                           '${entry.value} ${_t('বার', 'times', 'مرة')}',

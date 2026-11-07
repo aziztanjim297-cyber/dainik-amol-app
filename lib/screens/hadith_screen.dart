@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/hadith_service.dart';
+import '../models/hadith_arabic_data.dart';
+import '../models/hadith_english_data.dart';
 
 class HadithScreen extends StatefulWidget {
   final bool isBn;
@@ -18,6 +20,52 @@ class HadithScreen extends StatefulWidget {
 class _HadithScreenState extends State<HadithScreen> {
   String _t(String bn, String en, String ar) =>
       widget.language == 'ar' ? ar : (widget.isBn ? bn : en);
+
+  String _number(Map<String, String> h) =>
+      h['no']!.replaceAllMapped(RegExp(r'[০-৯]'), (m) =>
+          '${'০১২৩৪৫৬৭৮৯'.indexOf(m[0]!)}');
+
+  Map<String, String>? _arabicData(Map<String, String> h) =>
+      hadithArabicData[_number(h)];
+
+  Map<String, String>? _englishData(Map<String, String> h) =>
+      hadithEnglishData[_number(h)];
+
+  String _hadithTitle(Map<String, String> h) {
+    if (widget.language == 'ar') {
+      return _arabicData(h)?['title'] ?? 'الحديث ${_number(h)}';
+    }
+    if (!widget.isBn) return 'Hadith ${_number(h)}';
+    return h['title']!;
+  }
+
+  String _hadithText(Map<String, String> h) {
+    if (widget.language == 'ar') return h['arabic']!;
+    if (!widget.isBn) {
+      return _englishData(h)?['englishText'] ??
+          'English translation unavailable';
+    }
+    return h['bangla']!;
+  }
+
+  String _hadithNarrator(Map<String, String> h) {
+    if (widget.language == 'ar') {
+      return _arabicData(h)?['narrator'] ?? '';
+    }
+    if (!widget.isBn) {
+      return _englishData(h)?['englishNarrator'] ?? '';
+    }
+    return h['narrator']!;
+  }
+
+  String _hadithSource(Map<String, String> h) =>
+      widget.isBn ? h['source']! : (_arabicData(h)?['source'] ?? '');
+
+String _hadithGrade(Map<String, String> h) =>
+      widget.isBn ? h['grade']! : (_arabicData(h)?['grade'] ?? '');
+
+String _hadithLesson(Map<String, String> h) =>
+      widget.isBn ? h['lesson']! : (_arabicData(h)?['lesson'] ?? '');
 
   TextDirection get _textDirection =>
       widget.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
@@ -43,6 +91,7 @@ class _HadithScreenState extends State<HadithScreen> {
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _bookmarkedHadiths = (prefs.getStringList('hadith_bookmarks_set') ?? []).toSet();
       _arabicFontSize = prefs.getDouble('hadith_arabic_font_size') ?? 21.0;
@@ -85,7 +134,7 @@ class _HadithScreenState extends State<HadithScreen> {
               .where((h) => _bookmarkedHadiths.contains(h['no']))
               .toList()
             ..sort((a, b) =>
-                int.parse(a['no']!).compareTo(int.parse(b['no']!)));
+                int.parse(_number(a)).compareTo(int.parse(_number(b))));
 
           return SizedBox(
             height: MediaQuery.of(sheetContext).size.height * 0.55,
@@ -151,15 +200,15 @@ class _HadithScreenState extends State<HadithScreen> {
                                 leading: CircleAvatar(
                                   backgroundColor: const Color(0xFF0D5C3A),
                                   foregroundColor: Colors.white,
-                                  child: Text(h['no']!),
+                                  child: Text(widget.language == 'ar' ? _number(h) : h['no']!),
                                 ),
                                 title: Text(
-                                  'হাদিস ${h['no']}: ${h['title']}',
+                                  '${_t('হাদিস', 'Hadith', 'الحديث')} ${widget.language == 'ar' ? _number(h) : h['no']}: ${_hadithTitle(h)}',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w600),
                                 ),
                                 subtitle: Text(
-                                  h['bangla']!,
+                                  _hadithText(h),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -194,12 +243,22 @@ class _HadithScreenState extends State<HadithScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final filtered = _allHadiths.where((h) {
-      String q = _searchQuery.toLowerCase();
-      return h['no']!.contains(q) ||
-          h['title']!.toLowerCase().contains(q) ||
-          h['bangla']!.toLowerCase().contains(q) ||
-          h['arabic']!.contains(q);
-    }).toList();
+    String q = _searchQuery.toLowerCase().trim();
+    final englishNumber = q.replaceAllMapped(
+      RegExp(r'[০-৯]'),
+      (m) => '${'০১২৩৪৫৬৭৮৯'.indexOf(m[0]!)}',
+    );
+    final banglaNumber = q.replaceAllMapped(
+      RegExp(r'[0-9]'),
+      (m) => '০১২৩৪৫৬৭৮৯'[int.parse(m[0]!)],
+    );
+    return h['no']!.contains(q) ||
+          h['no']!.contains(banglaNumber) ||
+          _number(h).contains(englishNumber) ||
+          _hadithTitle(h).toLowerCase().contains(q) ||
+          _hadithText(h).toLowerCase().contains(q) ||
+          _hadithNarrator(h).toLowerCase().contains(q);
+  }).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -269,14 +328,14 @@ Expanded(
                           ),
                           title: Text(
                             _t(
-                              'হাদিস ${h['no']}: ${h['title']}',
-                              'Hadith ${h['no']}: ${h['title']}',
-                              'الحديث ${h['no']}: ${h['title']}',
+                              'হাদিস ${h['no']}: ${_hadithTitle(h)}',
+                              'Hadith ${_number(h)}: ${_hadithTitle(h)}',
+                              'الحديث ${_number(h)}: ${_hadithTitle(h)}',
                             ),
                             textDirection: _textDirection,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                           ),
-                          subtitle: Text(h['bangla']!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          subtitle: Text(_hadithText(h), maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: _textDirection, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                           trailing: IconButton(
                             icon: Icon(isMarked ? Icons.bookmark : Icons.bookmark_border, color: isMarked ? Colors.amber.shade700 : Colors.grey),
                             onPressed: () => _toggleBookmark(h['no']!),
@@ -296,9 +355,9 @@ Expanded(
                                       border: Border.all(color: const Color(0xFF0D5C3A).withOpacity(0.2)),
                                     ),
                                     child: Directionality(
-                                      textDirection: TextDirection.rtl,
+                                      textDirection: _textDirection,
                                       child: Text(
-                                        h['arabic']!,
+                                        _hadithText(h),
                                         textAlign: TextAlign.justify,
                                         style: TextStyle(
                                           fontSize: _arabicFontSize,
@@ -313,27 +372,31 @@ Expanded(
                                   const SizedBox(height: 14),
 
                                   // বাংলা অর্থ
-                                  Text(h['bangla']!, style: const TextStyle(fontSize: 14.5, height: 1.6)),
+                                  if (widget.isBn)
+                                    Text(_hadithText(h), textDirection: _textDirection, style: const TextStyle(fontSize: 14.5, height: 1.6)),
                                   const Divider(height: 22),
 
                                   // রাবি ও সূত্র
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Expanded(child: Text(_t('বর্ণনাকারী: ${h['narrator']}', 'Narrator: ${h['narrator']}', 'الراوي: ${h['narrator']}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey))),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      Expanded(child: Text(_t('বর্ণনাকারী: ${_hadithNarrator(h)}', 'Narrator: ${_hadithNarrator(h)}', 'الراوي: ${_hadithNarrator(h)}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.blueGrey))),
+                                      if (widget.isBn || widget.language == 'ar')
+                                              Container(
+                                                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(4)),
-                                        child: Text(h['grade']!, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
+                                        child: Text(_hadithGrade(h), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0D5C3A))),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(_t('সূত্র: ${h['source']}', 'Source: ${h['source']}', 'المصدر: ${h['source']}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
+                                  if (widget.isBn || widget.language == 'ar')
+                                                Text(_t('সূত্র: ${_hadithSource(h)}', 'Source: ${_hadithSource(h)}', 'المصدر: ${_hadithSource(h)}'), textDirection: _textDirection, style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
                                   const SizedBox(height: 12),
 
-                                  // এআই শিক্ষা ও তাদাব্বুর
-                                  Container(
+                                   // এআই শিক্ষা ও তাদাব্বুর
+                                  if (widget.isBn || widget.language == 'ar')
+                 Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color: isDark ? const Color(0xFF143526) : const Color(0xFFE8F5E9),
@@ -351,7 +414,7 @@ Expanded(
                                           ],
                                         ),
                                         const SizedBox(height: 6),
-                                        Text(h['lesson']!, style: TextStyle(fontSize: 13, height: 1.5, color: isDark ? Colors.white70 : Colors.black87)),
+                                        Text(_hadithLesson(h), textDirection: _textDirection, style: TextStyle(fontSize: 13, height: 1.5, color: isDark ? Colors.white70 : Colors.black87)),
                                       ],
                                     ),
                                   ),
